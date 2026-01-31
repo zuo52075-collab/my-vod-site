@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
-    <title>奶香香影視 - 如意穩定版</title>
+    <title>奶香香影視 - 穩定修復版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -33,7 +33,7 @@
             <div class="bg-pink-600 w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl mx-auto mb-6 shadow-lg shadow-pink-500/20">
                 <i class="fas fa-shield-alt"></i>
             </div>
-            <h1 class="text-2xl font-black text-white mb-2">如意資源庫</h1>
+            <h1 class="text-2xl font-black text-white mb-2">安全驗證</h1>
             <p class="text-slate-400 text-sm mb-8">請輸入密碼解鎖內容</p>
             <input type="password" id="passwordInput" placeholder="請輸入密碼" 
                 class="w-full bg-slate-900 border border-slate-700 rounded-xl py-4 px-6 text-white text-center tracking-widest focus:ring-2 focus:ring-pink-500 outline-none mb-6">
@@ -54,7 +54,7 @@
                         <span class="text-xl font-bold">奶香香影視</span>
                     </div>
                     <div class="relative flex-1 max-w-md">
-                        <input type="text" id="searchInput" placeholder="搜尋如意資源..." 
+                        <input type="text" id="searchInput" placeholder="搜索關鍵字..." 
                             class="w-full bg-slate-800 border border-slate-700 rounded-full py-2 px-10 text-sm text-white focus:ring-2 focus:ring-pink-500 outline-none">
                         <i class="fas fa-search absolute left-4 top-2.5 text-slate-500"></i>
                     </div>
@@ -99,7 +99,7 @@
                     </div>
                     <div class="lg:col-span-1 space-y-6">
                         <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6">
-                            <h3 class="text-sm font-bold text-white mb-4 border-l-4 border-pink-500 pl-3">播放列表 (如意源)</h3>
+                            <h3 class="text-sm font-bold text-white mb-4 border-l-4 border-pink-500 pl-3">播放列表</h3>
                             <div id="sourceSwitcher" class="flex gap-2 mb-4 overflow-x-auto pb-2 custom-scrollbar"></div>
                             <div id="detailEpisodeList" class="grid grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar"></div>
                         </div>
@@ -112,18 +112,16 @@
     <script>
         const AUTH_KEY = '120120520zz';
         const CONFIG = {
-            // 主域名與備用域名列表
-            apiDomains: [
-                'https://cj.rycjapi.com/api.php/provide/vod/',
-                'https://cj.rytvapi.com/api.php/provide/vod/'
-            ],
-            // 優化後的代理節點，手機端建議優先使用 fast-reverse 代理
+            api: 'https://naixxzy.com/api.php/provide/vod/',
+            // 解析地址保持不變
+            playerBase: 'https://jx.m3u8.tv/jiexi/?url=',
+            // 優化後的加速節點策略
             proxies: [
-                (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+                (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&t=${Date.now()}`, 
                 (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-                (url) => url // 最後嘗試直連（部分移動網路直連反而快）
-            ],
-            playerBase: 'https://jx.m3u8.tv/jiexi/?url='
+                (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
+                (url) => url // 最後直連
+            ]
         };
 
         let state = {
@@ -151,51 +149,52 @@
 
         async function fetchList() {
             const grid = document.getElementById('videoGrid');
-            grid.innerHTML = `<div class="col-span-full flex flex-col items-center py-32"><div class="loading-spinner mb-4"></div><p class="text-slate-500 text-xs font-bold animate-pulse">正在嘗試優選加速節點...</p></div>`;
+            grid.innerHTML = `<div class="col-span-full flex flex-col items-center py-32"><div class="loading-spinner mb-4"></div><p class="text-slate-500 text-xs animate-pulse">手機加速加載中，請稍候...</p></div>`;
             
+            let targetUrl = `${CONFIG.api}?ac=detail&pg=${state.page}`;
+            if (state.search) targetUrl += `&wd=${encodeURIComponent(state.search)}`;
+            if (state.type) targetUrl += `&t=${state.type}`;
+
             let success = false;
+            // 遍歷所有加速節點
+            for (const proxyFn of CONFIG.proxies) {
+                if(success) break;
+                try {
+                    const finalUrl = proxyFn(targetUrl);
+                    const controller = new AbortController();
+                    // 手機端單個節點超時設為 4 秒，防止卡死
+                    const timeoutId = setTimeout(() => controller.abort(), 4000); 
+                    
+                    const response = await fetch(finalUrl, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) continue;
 
-            // 遍歷所有域名
-            for (const domain of CONFIG.apiDomains) {
-                if (success) break;
-
-                let targetUrl = `${domain}?ac=detail&pg=${state.page}`;
-                if (state.search) targetUrl += `&wd=${encodeURIComponent(state.search)}`;
-                if (state.type) targetUrl += `&t=${state.type}`;
-
-                // 遍歷所有代理
-                for (const proxyFn of CONFIG.proxies) {
-                    try {
-                        const finalUrl = proxyFn(targetUrl);
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 5000); // 縮短超時時間至5秒，快速切換
-                        
-                        const response = await fetch(finalUrl, { signal: controller.signal });
-                        clearTimeout(timeoutId);
-                        
-                        if (!response.ok) continue;
-
-                        let data = await response.json();
-                        if (data.contents) data = JSON.parse(data.contents);
-
-                        const result = Array.isArray(data) ? data[0] : data;
-                        if (result && result.list) {
-                            state.allLoadedData = result.list;
-                            renderList(result.list);
-                            document.getElementById('pageInfo').innerText = `${result.page} / ${result.pagecount}`;
-                            document.getElementById('prevBtn').disabled = result.page <= 1;
-                            document.getElementById('nextBtn').disabled = result.page >= result.pagecount;
-                            success = true;
-                            break; 
-                        }
-                    } catch (err) {
-                        console.warn('加速節點繁忙，切換中...');
+                    let data = await response.json();
+                    
+                    if (data.contents) {
+                        try {
+                            data = JSON.parse(data.contents);
+                        } catch(e) { continue; }
                     }
+
+                    const result = Array.isArray(data) ? data[0] : data;
+                    if (result && result.list) {
+                        state.allLoadedData = result.list;
+                        renderList(result.list);
+                        document.getElementById('pageInfo').innerText = `${result.page} / ${result.pagecount}`;
+                        document.getElementById('prevBtn').disabled = result.page <= 1;
+                        document.getElementById('nextBtn').disabled = result.page >= result.pagecount;
+                        success = true;
+                        break; 
+                    }
+                } catch (err) {
+                    console.log('當前節點超時，切換下一個...');
                 }
             }
 
             if (!success) {
-                grid.innerHTML = `<div class="col-span-full py-32 text-center text-red-400"><i class="fas fa-wifi text-3xl mb-4"></i><p>加速節點全部超時，請檢查手機網絡或刷新重試。</p><button onclick="fetchList()" class="mt-4 bg-slate-800 px-6 py-2 rounded-full text-white text-xs">重新連線</button></div>`;
+                grid.innerHTML = `<div class="col-span-full py-32 text-center text-red-400"><i class="fas fa-signal text-3xl mb-4"></i><p>所有加速節點響應緩慢</p><p class="text-[10px] text-slate-500 mt-2">請嘗試切換手機網絡(4G/WiFi)或刷新</p><button onclick="fetchList()" class="mt-4 bg-slate-800 px-6 py-2 rounded-full text-white text-xs">手動刷新</button></div>`;
             }
         }
 
@@ -203,10 +202,10 @@
             document.getElementById('videoGrid').innerHTML = list.map(item => `
                 <div class="video-card group" onclick="showPlayer(${item.vod_id})">
                     <div class="relative aspect-[3/4.5] rounded-xl overflow-hidden bg-slate-800 shadow-lg">
-                        <img src="${item.vod_pic}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onerror="this.src='https://via.placeholder.com/300x450?text=RY+Media'">
+                        <img src="${item.vod_pic}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent opacity-40"></div>
                         <div class="absolute bottom-2 right-2 bg-pink-600 text-[9px] font-bold text-white px-2 py-0.5 rounded shadow">
-                            ${item.vod_remarks || '高清'}
+                            ${item.vod_remarks || 'HD'}
                         </div>
                     </div>
                     <div class="mt-3 px-1">
@@ -236,7 +235,7 @@
             const urlGroups = v.vod_play_url.split('$$$');
             
             document.getElementById('sourceSwitcher').innerHTML = names.map((n, i) => `
-                <button onclick="renderEpisodes(${i})" class="flex-shrink-0 text-[10px] px-3 py-1 rounded border ${sourceIdx === i ? 'bg-pink-600 border-pink-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'} transition-colors">
+                <button onclick="renderEpisodes(${i})" class="flex-shrink-0 text-[10px] px-3 py-1 rounded border ${sourceIdx === i ? 'bg-pink-600 border-pink-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}">
                     ${n.toUpperCase()}
                 </button>
             `).join('');
@@ -248,7 +247,7 @@
 
             const list = document.getElementById('detailEpisodeList');
             list.innerHTML = episodes.map((ep, i) => `
-                <button onclick="playVideo('${ep.link}', this)" class="ep-btn p-2 text-[10px] rounded bg-slate-800/60 border border-slate-700 text-slate-300 hover:border-pink-500 truncate transition-all">
+                <button onclick="playVideo('${ep.link}', this)" class="ep-btn p-2 text-[10px] rounded bg-slate-800/60 border border-slate-700 text-slate-300 hover:border-pink-500 truncate">
                     ${ep.name}
                 </button>
             `).join('');
@@ -259,9 +258,9 @@
         window.playVideo = function(url, btn) {
             document.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('bg-pink-600', 'text-white', 'border-pink-500'));
             if (btn) btn.classList.add('bg-pink-600', 'text-white', 'border-pink-500');
-            
             let finalUrl = url.trim();
             if (finalUrl.startsWith('//')) finalUrl = 'https:' + finalUrl;
+            // 播放解析地址保持不變
             document.getElementById('mainIframe').src = CONFIG.playerBase + encodeURIComponent(finalUrl);
         };
 
