@@ -144,13 +144,14 @@
         const AUTH_KEY = '120120520zz';
         const CONFIG = {
             api: 'https://naixxzy.com/api.php/provide/vod/',
-            // 更換為更穩定的多代理列表
+            // 多重備用代理：確保在 GitHub 海外環境能順利穿透並獲取大陸資源
             proxies: [
                 'https://api.allorigins.win/raw?url=',
                 'https://api.codetabs.com/v1/proxy?quest=',
-                '' // 直連作為最後嘗試
+                'https://thingproxy.freeboard.io/fetch/',
+                '' // 最後嘗試直連
             ],
-            players: [{ name: '備用 A (推薦)', url: 'https://jx.m3u8.tv/jiexi/?url=' }]
+            players: [{ name: '奶香香解析 (推薦)', url: 'https://jx.m3u8.tv/jiexi/?url=' }]
         };
 
         let state = {
@@ -183,19 +184,30 @@
             if (e.key === 'Enter') checkAuth();
         });
 
+        // 核心採集函數：增加了自動重試機制
         async function fetchList() {
             const grid = document.getElementById('videoGrid');
-            grid.innerHTML = '<div class="col-span-full flex flex-col items-center py-32"><div class="loading-spinner mb-4"></div><p class="text-slate-500 text-xs animate-pulse font-bold">正在優化連線，獲取最新資源中...</p></div>';
+            grid.innerHTML = `
+                <div class="col-span-full flex flex-col items-center py-32">
+                    <div class="loading-spinner mb-4"></div>
+                    <p class="text-slate-500 text-xs animate-pulse font-bold">正在通過全球加速節點獲取資源...</p>
+                    <p class="text-slate-600 text-[10px] mt-2 text-center px-4">若長時間無反應，請嘗試刷新頁面或檢查網絡連線</p>
+                </div>`;
             
             let baseUrl = `${CONFIG.api}?ac=detail&pg=${state.page}`;
             if (state.search) baseUrl += `&wd=${encodeURIComponent(state.search)}`;
             if (state.type) baseUrl += `&t=${state.type}`;
 
-            // 嘗試不同的代理
+            // 輪詢代理列表直到成功
             for (let proxy of CONFIG.proxies) {
                 try {
                     const fetchUrl = proxy + (proxy ? encodeURIComponent(baseUrl) : baseUrl);
-                    const res = await fetch(fetchUrl, { timeout: 8000 });
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
+
+                    const res = await fetch(fetchUrl, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
                     if (!res.ok) continue;
                     
                     const data = await res.json();
@@ -207,15 +219,20 @@
                         document.getElementById('pageInfo').innerText = `${result.page} / ${result.pagecount}`;
                         document.getElementById('prevBtn').disabled = result.page <= 1;
                         document.getElementById('nextBtn').disabled = result.page >= result.pagecount;
-                        return; // 成功獲取則退出循環
+                        return; 
                     }
                 } catch (e) {
-                    console.error('代理嘗試失敗:', proxy, e);
-                    continue;
+                    console.warn(`代理節點連線失敗: ${proxy}`, e);
+                    continue; // 嘗試下一個代理
                 }
             }
             
-            grid.innerHTML = '<div class="col-span-full py-32 text-center text-red-400">連線異常，請檢查網路或稍後再試</div>';
+            grid.innerHTML = `
+                <div class="col-span-full py-32 text-center">
+                    <i class="fas fa-exclamation-triangle text-pink-500 text-3xl mb-4"></i>
+                    <p class="text-red-400 font-bold">所有加速節點連線異常</p>
+                    <button onclick="fetchList()" class="mt-4 bg-slate-800 px-6 py-2 rounded-full text-xs hover:bg-slate-700 transition-all">手動重試</button>
+                </div>`;
         }
 
         function renderList(list) {
