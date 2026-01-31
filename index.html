@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>奶香香影視 - 安全驗證版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { --primary: #ec4899; --dark: #0f172a; }
+        body { background-color: var(--dark); color: #e2e8f0; font-family: -apple-system, sans-serif; }
+        .video-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .video-card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(236, 72, 153, 0.2); }
+        .loading-spinner {
+            border: 3px solid rgba(236, 72, 153, 0.1); border-top: 3px solid var(--primary);
+            border-radius: 50%; width: 35px; height: 35px; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .player-wrapper { position: relative; padding-bottom: 56.25%; height: 0; background: #000; border-radius: 16px; overflow: hidden; }
+        .player-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+        .view-hidden { display: none !important; }
+        .custom-scrollbar::-webkit-scrollbar { height: 4px; width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .cat-active { background: #ec4899 !important; color: white !important; font-weight: bold; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4); }
+        .recommend-item:hover img { transform: scale(1.1); }
+        
+        /* 密碼層樣式 */
+        #authOverlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background-color: #0f172a;
+            display: flex; align-items: center; justify-content: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- 密碼驗證層 -->
+    <div id="authOverlay">
+        <div class="w-full max-w-md p-8 bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl mx-4 text-center">
+            <div class="bg-pink-600 w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl mx-auto mb-6 shadow-lg shadow-pink-500/20">
+                <i class="fas fa-lock"></i>
+            </div>
+            <h1 class="text-2xl font-black text-white mb-2">訪問受限</h1>
+            <p class="text-slate-400 text-sm mb-8">請輸入密碼以解鎖奶香香影視內容</p>
+            
+            <div class="relative mb-6">
+                <input type="password" id="passwordInput" placeholder="請輸入密碼" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-xl py-4 px-6 text-white text-center tracking-[0.5em] focus:ring-2 focus:ring-pink-500 outline-none transition-all">
+            </div>
+            
+            <button onclick="checkAuth()" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-pink-500/20 transition-all active:scale-95">
+                立即進入
+            </button>
+            <p id="authError" class="text-red-400 text-xs mt-4 opacity-0 transition-opacity">密碼錯誤，請重新輸入</p>
+        </div>
+    </div>
+
+    <!-- 網站主要內容 (初始隱藏) -->
+    <div id="mainContent" class="opacity-0 transition-opacity duration-700">
+        <!-- 導航欄 -->
+        <nav class="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3">
+            <div class="max-w-7xl mx-auto flex flex-col gap-3">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-2 cursor-pointer" onclick="goHome()">
+                        <div class="bg-pink-600 p-2 rounded-lg text-white shadow-lg"><i class="fas fa-play"></i></div>
+                        <span class="text-xl font-black tracking-tighter">奶香香影視</span>
+                    </div>
+                    
+                    <div class="relative flex-1 max-w-md">
+                        <input type="text" id="searchInput" placeholder="搜尋影片、導演、主演..." 
+                            class="w-full bg-slate-800/80 border border-slate-700 rounded-full py-2 px-5 pl-10 text-sm focus:ring-2 focus:ring-pink-500 text-white outline-none">
+                        <i class="fas fa-search absolute left-4 top-2.5 text-slate-500"></i>
+                    </div>
+                    <button onclick="goHome()" class="text-slate-400 hover:text-white transition-colors"><i class="fas fa-home"></i></button>
+                </div>
+
+                <!-- 分類導航 -->
+                <div id="categoryNav" class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                    <button onclick="changeCat('', this)" class="cat-btn cat-active flex-shrink-0 px-4 py-1 rounded-full bg-slate-800 text-[11px] text-slate-300">全部</button>
+                    <button onclick="changeCat('1', this)" class="cat-btn flex-shrink-0 px-4 py-1 rounded-full bg-slate-800 text-[11px] text-slate-300">電影</button>
+                    <button onclick="changeCat('2', this)" class="cat-btn flex-shrink-0 px-4 py-1 rounded-full bg-slate-800 text-[11px] text-slate-300">連續劇</button>
+                    <button onclick="changeCat('3', this)" class="cat-btn flex-shrink-0 px-4 py-1 rounded-full bg-slate-800 text-[11px] text-slate-300">綜藝</button>
+                    <button onclick="changeCat('4', this)" class="cat-btn flex-shrink-0 px-4 py-1 rounded-full bg-slate-800 text-[11px] text-slate-300">動漫</button>
+                    <button onclick="changeCat('20', this)" class="cat-btn flex-shrink-0 px-4 py-1 rounded-full bg-slate-800 text-[11px] text-slate-300">紀錄片</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 列表頁 -->
+        <main id="homeView" class="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
+            <div id="videoGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6"></div>
+            <div id="pagination" class="mt-12 flex justify-center items-center gap-6 py-8 border-t border-slate-800">
+                <button id="prevBtn" class="bg-slate-800 hover:bg-pink-600 px-6 py-2 rounded-full disabled:opacity-30 transition-all text-xs font-bold">上一頁</button>
+                <span id="pageInfo" class="text-slate-400 font-mono text-xs">1 / 1</span>
+                <button id="nextBtn" class="bg-slate-800 hover:bg-pink-600 px-6 py-2 rounded-full transition-all text-xs font-bold">下一頁</button>
+            </div>
+        </main>
+
+        <!-- 播放頁 -->
+        <main id="playerView" class="flex-1 w-full view-hidden bg-slate-950">
+            <div class="max-w-7xl mx-auto px-4 py-6">
+                <button onclick="goHome()" class="mb-6 text-slate-400 hover:text-pink-500 flex items-center gap-2 text-sm font-bold transition-colors">
+                    <i class="fas fa-arrow-left"></i> 返回列表
+                </button>
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div class="lg:col-span-3 space-y-6">
+                        <div class="player-wrapper shadow-2xl">
+                            <iframe id="mainIframe" allowfullscreen sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"></iframe>
+                        </div>
+                        <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-xl">
+                            <div class="flex flex-col gap-4">
+                                <div class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase">
+                                    <i class="fas fa-bolt text-pink-500"></i> 播放線路
+                                </div>
+                                <div id="playerSelector" class="flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                        <div class="p-2">
+                            <h2 id="detailTitle" class="text-2xl font-black text-white mb-3">影片標題</h2>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span id="detailType" class="px-3 py-1 bg-slate-800 text-slate-400 text-[10px] font-bold rounded-full border border-slate-700">分類</span>
+                                <span id="detailRemark" class="px-3 py-1 bg-pink-600 text-white text-[10px] font-bold rounded-full">狀態</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-2xl">
+                            <h3 class="text-sm font-bold text-white mb-4 border-l-4 border-pink-500 pl-4">劇集列表</h3>
+                            <div id="sourceSwitcher" class="flex gap-2 mb-4 overflow-x-auto pb-2 custom-scrollbar"></div>
+                            <div id="detailEpisodeList" class="grid grid-cols-3 gap-2 max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar"></div>
+                        </div>
+                        <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-2xl">
+                            <h3 class="text-sm font-bold text-white mb-4 border-l-4 border-indigo-500 pl-4">隨機推薦</h3>
+                            <div id="randomRecommendList" class="space-y-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const AUTH_KEY = '120120520zz';
+        const CONFIG = {
+            api: 'https://naixxzy.com/api.php/provide/vod/',
+            proxy: 'https://api.codetabs.com/v1/proxy?quest=', 
+            players: [{ name: '備用 A (推薦)', url: 'https://jx.m3u8.tv/jiexi/?url=' }]
+        };
+
+        let state = {
+            page: 1, search: '', type: '', activePlayerIdx: 0,
+            activeUrl: '', currentVideoData: null, allLoadedData: []
+        };
+
+        // 密碼驗證邏輯
+        function checkAuth() {
+            const input = document.getElementById('passwordInput').value;
+            const error = document.getElementById('authError');
+            if (input === AUTH_KEY) {
+                sessionStorage.setItem('isNaxxAuthed', 'true');
+                unlockSite();
+            } else {
+                error.style.opacity = '1';
+                document.getElementById('passwordInput').value = '';
+                setTimeout(() => { error.style.opacity = '0'; }, 2000);
+            }
+        }
+
+        function unlockSite() {
+            document.getElementById('authOverlay').style.display = 'none';
+            document.getElementById('mainContent').classList.remove('opacity-0');
+            fetchList();
+        }
+
+        // 回車鍵提交
+        document.getElementById('passwordInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkAuth();
+        });
+
+        async function fetchList() {
+            const grid = document.getElementById('videoGrid');
+            grid.innerHTML = '<div class="col-span-full flex flex-col items-center py-32"><div class="loading-spinner mb-4"></div><p class="text-slate-500 text-xs animate-pulse font-bold">加速獲取最新資源中...</p></div>';
+            try {
+                let url = `${CONFIG.api}?ac=detail&pg=${state.page}`;
+                if (state.search) url += `&wd=${encodeURIComponent(state.search)}`;
+                if (state.type) url += `&t=${state.type}`;
+                const res = await fetch(CONFIG.proxy + encodeURIComponent(url));
+                const data = await res.json();
+                const result = Array.isArray(data) ? data[0] : data; 
+                if (!result || !result.list || result.list.length === 0) {
+                    grid.innerHTML = '<p class="col-span-full py-32 text-center text-slate-500">暫無內容</p>';
+                    return;
+                }
+                state.allLoadedData = result.list;
+                renderList(result.list);
+                document.getElementById('pageInfo').innerText = `${result.page} / ${result.pagecount}`;
+                document.getElementById('prevBtn').disabled = result.page <= 1;
+                document.getElementById('nextBtn').disabled = result.page >= result.pagecount;
+            } catch (e) {
+                grid.innerHTML = '<div class="col-span-full py-32 text-center text-red-400">連線異常</div>';
+            }
+        }
+
+        function renderList(list) {
+            document.getElementById('videoGrid').innerHTML = list.map((item) => `
+                <div class="video-card group" onclick='showPlayer(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
+                    <div class="relative aspect-[3/4.2] rounded-2xl overflow-hidden bg-slate-800 shadow-xl border border-white/5">
+                        <img src="${item.vod_pic}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent opacity-60"></div>
+                        <div class="absolute bottom-2 right-2 bg-pink-600 text-[9px] font-bold text-white px-2 py-0.5 rounded shadow-lg">
+                            ${item.vod_remarks || 'HD'}
+                        </div>
+                    </div>
+                    <div class="mt-3 px-1">
+                        <h3 class="text-xs font-bold text-slate-200 group-hover:text-pink-500 truncate transition-colors">${item.vod_name}</h3>
+                        <p class="text-[10px] text-slate-500 mt-1">${item.type_name}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.showPlayer = function(item) {
+            state.currentVideoData = item;
+            document.getElementById('homeView').classList.add('view-hidden');
+            document.getElementById('playerView').classList.remove('view-hidden');
+            window.scrollTo({top: 0, behavior: 'smooth'});
+            document.getElementById('detailTitle').innerText = item.vod_name;
+            document.getElementById('detailRemark').innerText = item.vod_remarks;
+            document.getElementById('detailType').innerText = item.type_name;
+            renderPlayerSelector();
+            parseEpisodes(0);
+            renderRandomRecommends();
+        };
+
+        function renderRandomRecommends() {
+            const container = document.getElementById('randomRecommendList');
+            if (state.allLoadedData.length === 0) return;
+            const shuffled = [...state.allLoadedData].filter(v => v.vod_id !== state.currentVideoData.vod_id).sort(() => 0.5 - Math.random()).slice(0, 5);
+            container.innerHTML = shuffled.map(item => `
+                <div class="recommend-item flex gap-3 cursor-pointer group" onclick='showPlayer(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
+                    <div class="w-16 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-800">
+                        <img src="${item.vod_pic}" class="w-full h-full object-cover transition-transform duration-500">
+                    </div>
+                    <div class="flex-1 min-w-0 flex flex-col justify-center">
+                        <h4 class="text-xs font-bold text-slate-300 group-hover:text-pink-500 truncate">${item.vod_name}</h4>
+                        <p class="text-[10px] text-slate-500 mt-1">${item.type_name}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function parseEpisodes(sourceIdx) {
+            const item = state.currentVideoData;
+            const froms = item.vod_play_from.split('$$$');
+            const urls = item.vod_play_url.split('$$$');
+            document.getElementById('sourceSwitcher').innerHTML = froms.map((f, i) => `
+                <button onclick="parseEpisodes(${i})" class="flex-shrink-0 text-[10px] px-3 py-1 rounded border ${sourceIdx === i ? 'bg-pink-600 border-pink-500 text-white shadow-lg' : 'bg-slate-800 border-slate-700 text-slate-500'} transition-all">
+                    ${f.toUpperCase()}
+                </button>
+            `).join('');
+            const currentLineUrls = urls[sourceIdx] || "";
+            const episodes = currentLineUrls.split('#').filter(s => s.trim()).map(s => {
+                const parts = s.split('$');
+                return { name: parts[0] || '播放', link: parts[1] || parts[0] };
+            });
+            const listEl = document.getElementById('detailEpisodeList');
+            listEl.innerHTML = episodes.map((ep, i) => `
+                <button onclick="playNow('${ep.link}', this)" class="ep-btn p-2 text-[11px] font-bold rounded-lg border border-slate-800 bg-slate-800/40 text-slate-400 hover:border-pink-500 hover:text-white truncate">
+                    ${ep.name}
+                </button>
+            `).join('');
+            if(episodes.length > 0) playNow(episodes[0].link, listEl.firstElementChild);
+        }
+
+        window.playNow = function(url, btn) {
+            state.activeUrl = url.trim();
+            document.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('bg-pink-600', 'border-pink-500', 'text-white', 'shadow-lg'));
+            if(btn) btn.classList.add('bg-pink-600', 'border-pink-500', 'text-white', 'shadow-lg');
+            applyIframe();
+        };
+
+        function applyIframe() {
+            let finalUrl = state.activeUrl;
+            if(finalUrl.startsWith('//')) finalUrl = 'https:' + finalUrl;
+            document.getElementById('mainIframe').src = CONFIG.players[state.activePlayerIdx].url + encodeURIComponent(finalUrl);
+        }
+
+        function renderPlayerSelector() {
+            document.getElementById('playerSelector').innerHTML = CONFIG.players.map((p, i) => `
+                <button class="px-4 py-1.5 text-[10px] font-bold rounded-lg border bg-pink-600 border-pink-500 text-white shadow-md cursor-default">
+                    ${p.name}
+                </button>
+            `).join('');
+        }
+
+        window.changeCat = function(typeId, btn) {
+            state.type = typeId; state.page = 1; state.search = '';
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('cat-active'));
+            btn.classList.add('cat-active');
+            fetchList();
+        };
+
+        window.goHome = function() {
+            document.getElementById('homeView').classList.remove('view-hidden');
+            document.getElementById('playerView').classList.add('view-hidden');
+            document.getElementById('mainIframe').src = '';
+        };
+
+        document.getElementById('searchInput').onkeypress = (e) => {
+            if(e.key === 'Enter') { state.search = e.target.value; state.page = 1; fetchList(); }
+        };
+
+        document.getElementById('prevBtn').onclick = () => { if(state.page > 1) { state.page--; fetchList(); window.scrollTo(0,0); } };
+        document.getElementById('nextBtn').onclick = () => { state.page++; fetchList(); window.scrollTo(0,0); };
+
+        window.onload = () => {
+            if (sessionStorage.getItem('isNaxxAuthed') === 'true') {
+                unlockSite();
+            }
+        };
+    </script>
+</body>
+</html>
