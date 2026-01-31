@@ -144,7 +144,12 @@
         const AUTH_KEY = '120120520zz';
         const CONFIG = {
             api: 'https://naixxzy.com/api.php/provide/vod/',
-            proxy: 'https://api.codetabs.com/v1/proxy?quest=', 
+            // 更換為更穩定的多代理列表
+            proxies: [
+                'https://api.allorigins.win/raw?url=',
+                'https://api.codetabs.com/v1/proxy?quest=',
+                '' // 直連作為最後嘗試
+            ],
             players: [{ name: '備用 A (推薦)', url: 'https://jx.m3u8.tv/jiexi/?url=' }]
         };
 
@@ -180,33 +185,44 @@
 
         async function fetchList() {
             const grid = document.getElementById('videoGrid');
-            grid.innerHTML = '<div class="col-span-full flex flex-col items-center py-32"><div class="loading-spinner mb-4"></div><p class="text-slate-500 text-xs animate-pulse font-bold">加速獲取最新資源中...</p></div>';
-            try {
-                let url = `${CONFIG.api}?ac=detail&pg=${state.page}`;
-                if (state.search) url += `&wd=${encodeURIComponent(state.search)}`;
-                if (state.type) url += `&t=${state.type}`;
-                const res = await fetch(CONFIG.proxy + encodeURIComponent(url));
-                const data = await res.json();
-                const result = Array.isArray(data) ? data[0] : data; 
-                if (!result || !result.list || result.list.length === 0) {
-                    grid.innerHTML = '<p class="col-span-full py-32 text-center text-slate-500">暫無內容</p>';
-                    return;
+            grid.innerHTML = '<div class="col-span-full flex flex-col items-center py-32"><div class="loading-spinner mb-4"></div><p class="text-slate-500 text-xs animate-pulse font-bold">正在優化連線，獲取最新資源中...</p></div>';
+            
+            let baseUrl = `${CONFIG.api}?ac=detail&pg=${state.page}`;
+            if (state.search) baseUrl += `&wd=${encodeURIComponent(state.search)}`;
+            if (state.type) baseUrl += `&t=${state.type}`;
+
+            // 嘗試不同的代理
+            for (let proxy of CONFIG.proxies) {
+                try {
+                    const fetchUrl = proxy + (proxy ? encodeURIComponent(baseUrl) : baseUrl);
+                    const res = await fetch(fetchUrl, { timeout: 8000 });
+                    if (!res.ok) continue;
+                    
+                    const data = await res.json();
+                    const result = Array.isArray(data) ? data[0] : data; 
+                    
+                    if (result && result.list) {
+                        state.allLoadedData = result.list;
+                        renderList(result.list);
+                        document.getElementById('pageInfo').innerText = `${result.page} / ${result.pagecount}`;
+                        document.getElementById('prevBtn').disabled = result.page <= 1;
+                        document.getElementById('nextBtn').disabled = result.page >= result.pagecount;
+                        return; // 成功獲取則退出循環
+                    }
+                } catch (e) {
+                    console.error('代理嘗試失敗:', proxy, e);
+                    continue;
                 }
-                state.allLoadedData = result.list;
-                renderList(result.list);
-                document.getElementById('pageInfo').innerText = `${result.page} / ${result.pagecount}`;
-                document.getElementById('prevBtn').disabled = result.page <= 1;
-                document.getElementById('nextBtn').disabled = result.page >= result.pagecount;
-            } catch (e) {
-                grid.innerHTML = '<div class="col-span-full py-32 text-center text-red-400">連線異常</div>';
             }
+            
+            grid.innerHTML = '<div class="col-span-full py-32 text-center text-red-400">連線異常，請檢查網路或稍後再試</div>';
         }
 
         function renderList(list) {
             document.getElementById('videoGrid').innerHTML = list.map((item) => `
                 <div class="video-card group" onclick='showPlayer(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
                     <div class="relative aspect-[3/4.2] rounded-2xl overflow-hidden bg-slate-800 shadow-xl border border-white/5">
-                        <img src="${item.vod_pic}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy">
+                        <img src="${item.vod_pic}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.src='https://via.placeholder.com/300x420?text=No+Poster'">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent opacity-60"></div>
                         <div class="absolute bottom-2 right-2 bg-pink-600 text-[9px] font-bold text-white px-2 py-0.5 rounded shadow-lg">
                             ${item.vod_remarks || 'HD'}
@@ -240,7 +256,7 @@
             container.innerHTML = shuffled.map(item => `
                 <div class="recommend-item flex gap-3 cursor-pointer group" onclick='showPlayer(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
                     <div class="w-16 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-800">
-                        <img src="${item.vod_pic}" class="w-full h-full object-cover transition-transform duration-500">
+                        <img src="${item.vod_pic}" class="w-full h-full object-cover transition-transform duration-500" onerror="this.src='https://via.placeholder.com/100x140?text=Poster'">
                     </div>
                     <div class="flex-1 min-w-0 flex flex-col justify-center">
                         <h4 class="text-xs font-bold text-slate-300 group-hover:text-pink-500 truncate">${item.vod_name}</h4>
