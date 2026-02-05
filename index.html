@@ -60,6 +60,11 @@
         
         .skeleton { background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
         @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* 分頁專用樣式 */
+        .page-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); width: 50px; text-align: center; border-radius: 8px; font-size: 12px; height: 32px; }
+        .page-btn { padding: 8px 16px; background: rgba(255,255,255,0.05); border-radius: 12px; font-weight: bold; font-size: 12px; }
+        .page-btn:active { background: var(--main-red); }
     </style>
 </head>
 <body class="pb-24">
@@ -109,15 +114,22 @@
                             <span class="w-1 h-4 bg-red-600 rounded-full"></span>
                             <h2 id="listTitle" class="text-lg font-black text-white">熱播精選</h2>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <span id="pageInfo" class="text-[10px] font-mono text-gray-600">1 / 99</span>
-                            <div class="flex gap-1">
-                                <button id="prevBtn" class="w-8 h-8 flex items-center justify-center bg-white/5 rounded-lg text-xs"><i class="fas fa-chevron-left"></i></button>
-                                <button id="nextBtn" class="w-8 h-8 flex items-center justify-center bg-white/5 rounded-lg text-xs"><i class="fas fa-chevron-right"></i></button>
-                            </div>
-                        </div>
                     </div>
                     <div id="movieGrid" class="grid grid-cols-2 gap-4"></div>
+
+                    <!-- 底部分頁器 -->
+                    <div class="mt-12 mb-8 flex flex-col items-center gap-6 p-4 bg-white/5 rounded-[2rem] border border-white/5">
+                        <div class="flex items-center gap-4">
+                            <button onclick="fetchData(state.page - 1)" class="page-btn text-gray-400"><i class="fas fa-arrow-left mr-2"></i>上一頁</button>
+                            <span class="text-xs font-black text-white uppercase tracking-tighter">第 <span class="text-red-600 mx-1 text-base" id="currentPageDisplay">1</span> 頁</span>
+                            <button onclick="fetchData(state.page + 1)" class="page-btn text-white">下一頁<i class="fas fa-arrow-right ml-2"></i></button>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] text-gray-500 font-bold">跳轉至</span>
+                            <input type="number" id="jumpInput" class="page-input" placeholder="10">
+                            <button onclick="jumpToPage()" class="bg-red-600 px-4 py-2 rounded-lg text-[10px] font-black">確定</button>
+                        </div>
+                    </div>
                 </section>
             </div>
 
@@ -134,11 +146,27 @@
                     </div>
                 </div>
                 <div class="p-6">
-                    <button onclick="goHome()" class="text-[10px] font-bold text-gray-500 uppercase mb-4 flex items-center gap-1"><i class="fas fa-chevron-left"></i>返回</button>
+                    <button onclick="goHome()" class="text-[10px] font-bold text-gray-500 uppercase mb-4 flex items-center gap-1"><i class="fas fa-chevron-left"></i>返回首頁</button>
                     <h1 id="pTitle" class="text-2xl font-black text-white mb-2">載入中...</h1>
                     <div id="epList" class="grid grid-cols-3 gap-2 mb-8 mt-4"></div>
-                    <div class="bg-white/5 p-4 rounded-2xl">
+                    <div class="bg-white/5 p-4 rounded-2xl mb-10">
                         <p id="pContent" class="text-xs text-gray-400 leading-relaxed"></p>
+                    </div>
+
+                    <!-- 隨機推薦板塊 -->
+                    <div class="mt-10">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-2">
+                                <span class="w-1 h-4 bg-amber-500 rounded-full"></span>
+                                <h3 class="text-lg font-black text-white">隨機推薦作品</h3>
+                            </div>
+                            <button onclick="refreshRecommend()" class="text-xs text-amber-500 font-bold flex items-center gap-1 active:rotate-180 transition-transform duration-500">
+                                <i class="fas fa-sync-alt"></i> 換一批
+                            </button>
+                        </div>
+                        <div id="recommendGrid" class="grid grid-cols-2 gap-4">
+                            <!-- 推薦作品 -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -148,7 +176,7 @@
             <a href="javascript:void(0)" onclick="switchTab('home')" class="nav-item active" id="tab-home"><i class="fas fa-home"></i><span>精選</span></a>
             <a href="javascript:void(0)" onclick="switchTab('rank')" class="nav-item" id="tab-rank"><i class="fas fa-chart-line"></i><span>榜單</span></a>
             <a href="javascript:void(0)" onclick="toggleSearch()" class="nav-item"><i class="fas fa-search"></i><span>搜索</span></a>
-            <a href="javascript:void(0)" onclick="showToast('更多源優化中')" class="nav-item"><i class="fas fa-layer-group"></i><span>多源</span></a>
+            <a href="javascript:void(0)" onclick="showToast('正在優化全球加速節點')" class="nav-item"><i class="fas fa-bolt"></i><span>極速</span></a>
         </nav>
 
         <div id="searchOverlay" class="fixed inset-0 z-[2000] glass flex-col p-6 hidden">
@@ -171,17 +199,17 @@
                 { name: '量子資源', url: 'https://cj.lziapi.com/api.php/provide/vod/' }
             ],
             jx: 'https://mtjiexi.cc:966/?url=',
-            // 優化代理策略：優先直連，次選國內較快的代理
             proxies: [
-                (url) => url, // 1. 優先嘗試直連（Direct Fetch）
-                (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&t=${Date.now()}`, // 2. 備選代理
-                (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` // 3. 保底代理
+                (url) => url, 
+                (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&t=${Date.now()}`,
+                (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
             ]
         };
 
         let state = {
             page: 1, typeId: '', keyword: '', activeSourceIdx: 0,
-            movies: [], classes: [], swiper: null, currentTab: 'home'
+            movies: [], classes: [], swiper: null, currentTab: 'home',
+            allPool: [] // 緩存當前池子用於隨機推薦
         };
 
         function checkAccess() {
@@ -189,7 +217,7 @@
                 sessionStorage.setItem('naixx_auth_v4', 'true');
                 unlockSite();
             } else {
-                showToast('訪問密碼錯誤');
+                showToast('密碼錯誤，請檢查');
             }
         }
 
@@ -201,9 +229,7 @@
             initApp();
         }
 
-        // 優化：並行初始化，獲取分類和列表同時進行
         async function initApp() {
-            // 先嘗試從本地緩存讀取分類，實現秒開
             const cachedClasses = localStorage.getItem(`classes_${state.activeSourceIdx}`);
             if (cachedClasses) {
                 state.classes = JSON.parse(cachedClasses);
@@ -221,14 +247,16 @@
             const data = await smartFetch(url);
             if (data && data.class) {
                 state.classes = data.class;
-                // 存入緩存
                 localStorage.setItem(`classes_${state.activeSourceIdx}`, JSON.stringify(data.class));
                 renderFilters();
             }
         }
 
         async function fetchData(page = 1) {
+            if (page < 1) return;
             renderSkeleton();
+            window.scrollTo({top: 0, behavior: 'smooth'});
+            
             const source = CONFIG.sources[state.activeSourceIdx].url;
             const target = `${source}?ac=detail&pg=${page}${state.typeId ? '&t='+state.typeId : ''}${state.keyword ? '&wd='+encodeURIComponent(state.keyword) : ''}`;
             
@@ -236,30 +264,30 @@
             if (data && data.list) {
                 state.movies = data.list.map(m => ({ ...m, heat: (Math.random()*20 + 79.5).toFixed(1) }));
                 state.page = parseInt(data.page);
+                state.allPool = [...state.movies]; // 更新隨機池
                 renderUI();
+                renderRecommend(); // 每次刷新數據也刷新推薦
             } else {
-                showToast('當前線路繁忙，請換源');
+                showToast('加載超時，請點擊底部分頁重試');
             }
         }
 
-        // 核心加速邏輯：帶超時機制的智能請求
         async function smartFetch(url) {
             for (const proxyFn of CONFIG.proxies) {
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5秒不返回直接換下一個代理
+                    const timeoutId = setTimeout(() => controller.abort(), 2800); // 壓縮超時至2.8秒，快速切換
                     
                     const resp = await fetch(proxyFn(url), { signal: controller.signal });
                     clearTimeout(timeoutId);
                     
                     let result = await resp.json();
-                    // 處理 allorigins 等代理返回的嵌套結構
                     if (result.contents) result = JSON.parse(result.contents);
                     const final = Array.isArray(result) ? result[0] : result;
                     
                     if (final) return final;
                 } catch (e) {
-                    continue; // 失敗則嘗試下一個
+                    continue; 
                 }
             }
             return null;
@@ -270,7 +298,8 @@
             renderHero();
             renderRank();
             renderFilters();
-            document.getElementById('pageInfo').innerText = `${state.page} / 99`;
+            document.getElementById('currentPageDisplay').innerText = state.page;
+            document.getElementById('jumpInput').value = '';
         }
 
         function renderFilters() {
@@ -294,7 +323,7 @@
                     <div class="relative mb-2">
                         <img src="${m.vod_pic}" loading="lazy" onerror="this.src='https://via.placeholder.com/200x300?text=NAIXX'">
                         <div class="absolute bottom-2 left-2 bg-red-600/90 backdrop-blur text-[8px] font-black px-1.5 py-0.5 rounded text-white italic">
-                            RANK ${m.heat}
+                            LIVE ${m.heat}
                         </div>
                     </div>
                     <h3 class="text-xs font-bold text-gray-200 truncate">${m.vod_name}</h3>
@@ -302,6 +331,33 @@
                 </div>
             `).join('');
         }
+
+        // 隨機推薦渲染
+        window.renderRecommend = function() {
+            const container = document.getElementById('recommendGrid');
+            if (!container) return;
+            
+            // 從池子裡隨機選 10 個
+            const shuffled = [...state.allPool].sort(() => 0.5 - Math.random());
+            const selected = shuffled.slice(0, 10);
+            
+            container.innerHTML = selected.map(m => `
+                <div class="movie-card animate-fade-in" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
+                    <div class="relative mb-2">
+                        <img src="${m.vod_pic}" class="w-full rounded-xl aspect-[2/3] object-cover" loading="lazy" onerror="this.src='https://via.placeholder.com/200x300?text=NAIXX'">
+                        <div class="absolute top-2 right-2 bg-black/60 backdrop-blur text-[7px] font-black px-1.5 py-0.5 rounded text-amber-500 border border-amber-500/30">
+                            推薦
+                        </div>
+                    </div>
+                    <h3 class="text-[11px] font-bold text-gray-300 truncate">${m.vod_name}</h3>
+                </div>
+            `).join('');
+        };
+
+        window.refreshRecommend = function() {
+            showToast('正在為您挑選佳作...');
+            renderRecommend();
+        };
 
         function renderHero() {
             const wrapper = document.getElementById('heroWrapper');
@@ -312,7 +368,7 @@
                     <div class="slide-overlay">
                         <h2 class="text-2xl font-black text-white leading-tight mb-2 line-clamp-2">${m.vod_name}</h2>
                         <div class="flex items-center gap-2 text-red-500 text-[10px] font-black">
-                            <span>PREMIUM DATA</span><span>•</span><span>${m.vod_year}</span>
+                            <span>ULTRA HD</span><span>•</span><span>${m.vod_year}</span>
                         </div>
                     </div>
                 </div>
@@ -372,6 +428,8 @@
             const list = document.getElementById('epList');
             list.innerHTML = eps.map(e => `<button onclick="playUrl('${e.u}', this)" class="bg-white/5 border border-white/10 py-2 rounded-lg text-[10px] text-gray-400 truncate px-1 font-bold">${e.n}</button>`).join('');
             if (eps.length > 0) playUrl(eps[0].u, list.firstElementChild);
+            
+            renderRecommend(); // 打開播放器時刷新推薦
         };
 
         window.playUrl = (u, btn) => {
@@ -385,6 +443,15 @@
             iframe.onload = () => loader.classList.add('hidden');
         };
 
+        window.jumpToPage = function() {
+            const val = document.getElementById('jumpInput').value;
+            if (val && val > 0) {
+                fetchData(parseInt(val));
+            } else {
+                showToast('請輸入有效頁碼');
+            }
+        };
+
         window.goHome = () => switchTab('home');
 
         window.toggleSearch = () => {
@@ -396,7 +463,7 @@
 
         window.switchSource = async (idx) => {
             state.activeSourceIdx = idx; state.page = 1; state.classes = [];
-            showToast(`正在切換線路...`);
+            showToast(`正在切換至：${CONFIG.sources[idx].name}`);
             await initApp();
         };
 
@@ -424,9 +491,6 @@
                 fetchData(1);
             }
         };
-
-        document.getElementById('nextBtn').onclick = () => fetchData(state.page + 1);
-        document.getElementById('prevBtn').onclick = () => state.page > 1 && fetchData(state.page - 1);
 
         window.onload = () => {
             if (sessionStorage.getItem('naixx_auth_v4') === 'true') unlockSite();
