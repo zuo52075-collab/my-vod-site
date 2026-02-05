@@ -62,9 +62,9 @@
         @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
         /* 分頁專用樣式 */
-        .page-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); width: 50px; text-align: center; border-radius: 8px; font-size: 12px; height: 32px; }
-        .page-btn { padding: 8px 16px; background: rgba(255,255,255,0.05); border-radius: 12px; font-weight: bold; font-size: 12px; }
-        .page-btn:active { background: var(--main-red); }
+        .page-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); width: 50px; text-align: center; border-radius: 8px; font-size: 12px; height: 32px; color: white; }
+        .page-btn { padding: 8px 16px; background: rgba(255,255,255,0.05); border-radius: 12px; font-weight: bold; font-size: 12px; transition: all 0.2s; }
+        .page-btn:active { background: var(--main-red); transform: scale(0.95); }
     </style>
 </head>
 <body class="pb-24">
@@ -77,7 +77,7 @@
                 <i class="fas fa-bolt text-3xl text-white"></i>
             </div>
             <h1 class="text-2xl font-black mb-2 text-white">奶香香影視</h1>
-            <p class="text-gray-500 text-[10px] tracking-widest uppercase mb-8">High-Speed Access</p>
+            <p class="text-gray-500 text-[10px] tracking-widest uppercase mb-8">Ultimate Performance</p>
             <input id="pwInput" type="password" placeholder="請輸入訪問密碼" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-center text-xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-red-600 transition-all text-white mb-4">
             <button onclick="checkAccess()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-xl transition-all">加速進入</button>
         </div>
@@ -176,7 +176,7 @@
             <a href="javascript:void(0)" onclick="switchTab('home')" class="nav-item active" id="tab-home"><i class="fas fa-home"></i><span>精選</span></a>
             <a href="javascript:void(0)" onclick="switchTab('rank')" class="nav-item" id="tab-rank"><i class="fas fa-chart-line"></i><span>榜單</span></a>
             <a href="javascript:void(0)" onclick="toggleSearch()" class="nav-item"><i class="fas fa-search"></i><span>搜索</span></a>
-            <a href="javascript:void(0)" onclick="showToast('正在優化全球加速節點')" class="nav-item"><i class="fas fa-bolt"></i><span>極速</span></a>
+            <a href="javascript:void(0)" onclick="showToast('加速節點已全量部署')" class="nav-item"><i class="fas fa-bolt text-amber-500"></i><span>極速</span></a>
         </nav>
 
         <div id="searchOverlay" class="fixed inset-0 z-[2000] glass flex-col p-6 hidden">
@@ -199,6 +199,7 @@
                 { name: '量子資源', url: 'https://cj.lziapi.com/api.php/provide/vod/' }
             ],
             jx: 'https://mtjiexi.cc:966/?url=',
+            // 節點列表
             proxies: [
                 (url) => url, 
                 (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&t=${Date.now()}`,
@@ -209,7 +210,7 @@
         let state = {
             page: 1, typeId: '', keyword: '', activeSourceIdx: 0,
             movies: [], classes: [], swiper: null, currentTab: 'home',
-            allPool: [] // 緩存當前池子用於隨機推薦
+            allPool: [] 
         };
 
         function checkAccess() {
@@ -236,15 +237,14 @@
                 renderFilters();
             }
 
-            Promise.all([
-                loadClasses(),
-                fetchData()
-            ]);
+            // 並行啟動
+            loadClasses();
+            fetchData();
         }
 
         async function loadClasses() {
             const url = `${CONFIG.sources[state.activeSourceIdx].url}?ac=list`;
-            const data = await smartFetch(url);
+            const data = await fastRaceFetch(url);
             if (data && data.class) {
                 state.classes = data.class;
                 localStorage.setItem(`classes_${state.activeSourceIdx}`, JSON.stringify(data.class));
@@ -260,37 +260,50 @@
             const source = CONFIG.sources[state.activeSourceIdx].url;
             const target = `${source}?ac=detail&pg=${page}${state.typeId ? '&t='+state.typeId : ''}${state.keyword ? '&wd='+encodeURIComponent(state.keyword) : ''}`;
             
-            const data = await smartFetch(target);
+            const data = await fastRaceFetch(target);
             if (data && data.list) {
                 state.movies = data.list.map(m => ({ ...m, heat: (Math.random()*20 + 79.5).toFixed(1) }));
                 state.page = parseInt(data.page);
-                state.allPool = [...state.movies]; // 更新隨機池
+                // 合併數據到推薦池
+                state.allPool = [...new Set([...state.allPool, ...state.movies])];
                 renderUI();
-                renderRecommend(); // 每次刷新數據也刷新推薦
+                renderRecommend();
             } else {
-                showToast('加載超時，請點擊底部分頁重試');
+                showToast('加載失敗，請切換線路重試');
             }
         }
 
-        async function smartFetch(url) {
-            for (const proxyFn of CONFIG.proxies) {
+        // --- 核心優化：極速競速請求 ---
+        async function fastRaceFetch(url) {
+            // 同時發起所有請求
+            const fetchTasks = CONFIG.proxies.map(async (proxyFn) => {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000); // 增加寬限時間
+
                 try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 2800); // 壓縮超時至2.8秒，快速切換
-                    
                     const resp = await fetch(proxyFn(url), { signal: controller.signal });
                     clearTimeout(timeoutId);
+                    
+                    if (!resp.ok) throw new Error('Network error');
                     
                     let result = await resp.json();
                     if (result.contents) result = JSON.parse(result.contents);
                     const final = Array.isArray(result) ? result[0] : result;
                     
                     if (final) return final;
+                    throw new Error('Empty data');
                 } catch (e) {
-                    continue; 
+                    throw e;
                 }
+            });
+
+            // 誰快用誰
+            try {
+                return await Promise.any(fetchTasks);
+            } catch (e) {
+                console.error("All fetch attempts failed", e);
+                return null;
             }
-            return null;
         }
 
         function renderUI() {
@@ -332,13 +345,12 @@
             `).join('');
         }
 
-        // 隨機推薦渲染
         window.renderRecommend = function() {
             const container = document.getElementById('recommendGrid');
             if (!container) return;
             
-            // 從池子裡隨機選 10 個
-            const shuffled = [...state.allPool].sort(() => 0.5 - Math.random());
+            const pool = state.allPool.length > 10 ? state.allPool : state.movies;
+            const shuffled = [...pool].sort(() => 0.5 - Math.random());
             const selected = shuffled.slice(0, 10);
             
             container.innerHTML = selected.map(m => `
@@ -355,7 +367,7 @@
         };
 
         window.refreshRecommend = function() {
-            showToast('正在為您挑選佳作...');
+            showToast('換一批隨機驚喜...');
             renderRecommend();
         };
 
@@ -368,7 +380,7 @@
                     <div class="slide-overlay">
                         <h2 class="text-2xl font-black text-white leading-tight mb-2 line-clamp-2">${m.vod_name}</h2>
                         <div class="flex items-center gap-2 text-red-500 text-[10px] font-black">
-                            <span>ULTRA HD</span><span>•</span><span>${m.vod_year}</span>
+                            <span>ULTRA SPEED</span><span>•</span><span>${m.vod_year}</span>
                         </div>
                     </div>
                 </div>
@@ -397,7 +409,16 @@
             `).join('');
         }
 
+        // --- 優化：切換 Tab 或返回主頁時停止播放 ---
+        function stopPlayer() {
+            const iframe = document.getElementById('mainPlayer');
+            if (iframe) {
+                iframe.src = ''; // 清空 src 會立即停止音訊和視頻加載
+            }
+        }
+
         window.switchTab = function(tab) {
+            stopPlayer();
             state.currentTab = tab;
             document.getElementById('homeView').style.display = tab === 'home' ? 'block' : 'none';
             document.getElementById('rankView').style.display = tab === 'rank' ? 'block' : 'none';
@@ -414,7 +435,7 @@
             document.getElementById('homeView').style.display = 'none';
             document.getElementById('rankView').style.display = 'none';
             document.getElementById('playView').style.display = 'block';
-            window.scrollTo(0,0);
+            window.scrollTo({top: 0, behavior: 'smooth'});
             
             document.getElementById('pTitle').innerText = m.vod_name;
             document.getElementById('pContent').innerText = (m.vod_content || '暫無介紹').replace(/<[^>]+>/g, '');
@@ -429,7 +450,7 @@
             list.innerHTML = eps.map(e => `<button onclick="playUrl('${e.u}', this)" class="bg-white/5 border border-white/10 py-2 rounded-lg text-[10px] text-gray-400 truncate px-1 font-bold">${e.n}</button>`).join('');
             if (eps.length > 0) playUrl(eps[0].u, list.firstElementChild);
             
-            renderRecommend(); // 打開播放器時刷新推薦
+            renderRecommend(); 
         };
 
         window.playUrl = (u, btn) => {
@@ -452,7 +473,10 @@
             }
         };
 
-        window.goHome = () => switchTab('home');
+        window.goHome = () => {
+            stopPlayer();
+            switchTab('home');
+        };
 
         window.toggleSearch = () => {
             const el = document.getElementById('searchOverlay');
@@ -462,12 +486,14 @@
         };
 
         window.switchSource = async (idx) => {
+            stopPlayer();
             state.activeSourceIdx = idx; state.page = 1; state.classes = [];
-            showToast(`正在切換至：${CONFIG.sources[idx].name}`);
+            showToast(`線路切換中...`);
             await initApp();
         };
 
         window.switchType = (id, btn) => {
+            stopPlayer();
             state.typeId = id; state.page = 1;
             fetchData(1);
             window.scrollTo(0,0);
