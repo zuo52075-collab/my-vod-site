@@ -2,249 +2,164 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="referrer" content="no-referrer">
-    <title>奶香香影視 - Premium Data Drive</title>
-    <!-- 核心庫引入 -->
+    <title>奶香香影視 - Premium Cinema</title>
+    <!-- 核心庫 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         :root { 
             --main-red: #e50914; 
-            --gold: #ffd700; 
             --bg-deep: #06090f;
+            --glass: rgba(15, 23, 42, 0.8);
         }
         body { 
             background-color: var(--bg-deep); 
             color: #f8fafc; 
-            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; 
+            font-family: 'PingFang SC', system-ui, -apple-system, sans-serif;
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
         }
-        
-        /* 極致毛玻璃 */
-        .glass-nav { 
-            background: rgba(6, 9, 15, 0.9); 
-            backdrop-filter: blur(30px); 
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        
+
+        .glass { background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* 英雄輪播 */
-        .swiper { width: 100%; height: 580px; border-radius: 2.5rem; }
-        @media (max-width: 640px) { .swiper { height: 320px; border-radius: 1.5rem; } }
-        
+        .mobile-header { height: 60px; }
+        .swiper { width: 100%; height: 40vh; max-height: 500px; border-radius: 0 0 1.5rem 1.5rem; }
+
         .slide-overlay { 
-            background: linear-gradient(to right, var(--bg-deep) 30%, rgba(6, 9, 15, 0) 90%), 
-                        linear-gradient(to top, var(--bg-deep) 10%, transparent 50%); 
-            position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; z-index: 10; 
+            background: linear-gradient(to top, var(--bg-deep) 15%, transparent 100%);
+            position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 2rem; z-index: 10;
         }
 
-        /* 影片卡片 */
-        .movie-card { transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1); }
-        .movie-card:hover { transform: translateY(-12px); }
-        .movie-card:hover img { transform: scale(1.1); filter: brightness(1.1); }
+        .movie-card img { aspect-ratio: 2/3; object-fit: cover; border-radius: 1rem; background: #1e293b; }
         
-        /* 排行榜 */
-        .rank-num { font-style: italic; font-weight: 900; -webkit-text-stroke: 1px rgba(255,255,255,0.05); }
-        .rank-1 { color: var(--gold); filter: drop-shadow(0 0 10px rgba(255,215,0,0.3)); }
-
-        .player-wrapper { 
-            position: relative; width: 100%; aspect-ratio: 16 / 9; 
-            background: #000; border-radius: 2.5rem; overflow: hidden;
-            box-shadow: 0 30px 60px -12px rgba(0,0,0,0.5);
+        .pill { 
+            white-space: nowrap; padding: 0.5rem 1.2rem; border-radius: 99px; 
+            font-size: 0.75rem; font-weight: 600; transition: all 0.3s;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
         }
-        .player-wrapper iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+        .pill.active { background: var(--main-red); border-color: var(--main-red); color: white; box-shadow: 0 4px 12px rgba(229, 9, 20, 0.3); }
 
-        /* 作品分類按鈕樣式 */
-        .cate-pill { transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); }
-        .cate-pill:hover { border-color: var(--main-red); background: rgba(229, 9, 20, 0.05); }
-        .cate-pill.active { background: var(--main-red); color: white; border-color: var(--main-red); box-shadow: 0 8px 20px rgba(229, 9, 20, 0.4); }
+        .bottom-nav { 
+            position: fixed; bottom: 0; left: 0; right: 0; height: 70px; 
+            display: flex; justify-content: space-around; items: center; 
+            z-index: 2000; border-top: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #64748b; font-size: 10px; font-weight: bold; }
+        .nav-item.active { color: var(--main-red); }
+        .nav-item i { font-size: 1.2rem; }
 
-        /* 資源站源頭切換 */
-        .source-pill { transition: all 0.3s ease; border: 1px solid rgba(255,215,0,0.1); color: #94a3b8; }
-        .source-pill.active { background: linear-gradient(45deg, #f59e0b, #d97706); color: #000; font-weight: 900; border-color: #f59e0b; }
-
-        .heat-badge { background: linear-gradient(45deg, #ff4d4d, var(--main-red)); }
+        .loader { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--main-red); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
         
-        /* 視圖動畫 */
-        .view-transition { animation: slideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .skeleton { background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
+        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
-<body class="custom-scrollbar">
+<body class="pb-24">
 
-    <!-- 驗證層 -->
-    <div id="passwordView" class="fixed inset-0 z-[5000] flex items-center justify-center p-6 bg-slate-950">
-        <div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at 2px 2px, #e50914 1px, transparent 0); background-size: 32px 32px;"></div>
-        <div class="relative w-full max-w-md bg-slate-900/60 backdrop-blur-3xl border border-white/10 p-12 rounded-[3.5rem] shadow-2xl text-center">
-            <div class="mb-10">
-                <div class="w-24 h-24 bg-red-600 rounded-[2.2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl animate-pulse">
-                    <i class="fas fa-fingerprint text-4xl text-white"></i>
-                </div>
-                <h1 class="text-3xl font-black mb-2 tracking-tighter text-white">奶香香影視</h1>
-                <p class="text-gray-500 text-xs font-bold tracking-widest uppercase">Premium Works Cinema</p>
+    <!-- 登錄驗證 -->
+    <div id="passwordView" class="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-slate-950">
+        <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, #e50914 1px, transparent 0); background-size: 24px 24px;"></div>
+        <div class="relative w-full max-w-sm bg-slate-900/80 backdrop-blur-xl border border-white/10 p-10 rounded-[2.5rem] shadow-2xl text-center">
+            <div class="w-20 h-20 bg-red-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-600/20">
+                <i class="fas fa-bolt text-3xl text-white"></i>
             </div>
-            <div class="space-y-6">
-                <input id="pwInput" type="password" placeholder="輸入訪問密碼" 
-                    class="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-4 text-center text-2xl tracking-[0.8em] focus:outline-none focus:ring-2 focus:ring-red-600 transition-all text-white">
-                <button onclick="checkAccess()" class="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-95">
-                    驗證權限
-                </button>
-            </div>
+            <h1 class="text-2xl font-black mb-2 text-white">奶香香影視</h1>
+            <p class="text-gray-500 text-[10px] tracking-widest uppercase mb-8">High-Speed Access</p>
+            <input id="pwInput" type="password" placeholder="請輸入訪問密碼" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-center text-xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-red-600 transition-all text-white mb-4">
+            <button onclick="checkAccess()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-xl transition-all">加速進入</button>
         </div>
     </div>
 
-    <!-- 主頁面 -->
-    <div id="mainApp" class="hidden opacity-0 transition-opacity duration-1000 flex flex-col min-h-screen">
-        
-        <nav class="fixed top-0 w-full z-[1000] glass-nav py-4 px-6 lg:px-12">
-            <div class="max-w-[1600px] mx-auto flex items-center justify-between gap-8">
-                <div class="flex items-center gap-4 cursor-pointer shrink-0" onclick="goHome()">
-                    <div class="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg"><i class="fas fa-play text-white text-xs"></i></div>
-                    <span class="hidden sm:inline text-xl font-black tracking-tighter text-white uppercase">Naixx <span class="text-red-600">Cinema</span></span>
-                </div>
-
-                <!-- 動態作品分類導航 -->
-                <div id="pcNav" class="flex-1 flex items-center gap-6 overflow-x-auto hide-scroll text-sm font-bold text-gray-400">
-                    <!-- JS 動態生成 -->
-                </div>
-
-                <div class="relative hidden md:block w-64">
-                    <input id="pcSearch" type="text" placeholder="搜尋全網佳作..." 
-                        class="w-full bg-white/5 border border-white/10 rounded-full py-2 px-10 focus:outline-none focus:ring-1 focus:ring-red-600 transition-all text-xs text-white">
-                    <i class="fas fa-search absolute left-4 top-2.5 text-gray-600"></i>
-                </div>
+    <div id="mainApp" class="hidden opacity-0 transition-opacity duration-700">
+        <header class="fixed top-0 w-full z-[1000] glass mobile-header px-6 flex items-center justify-between">
+            <div class="flex items-center gap-2" onclick="goHome()">
+                <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg"><i class="fas fa-play text-white text-[10px]"></i></div>
+                <span class="text-lg font-black tracking-tighter text-white uppercase">Naixx</span>
             </div>
-        </nav>
+            <button onclick="toggleSearch()" class="w-10 h-10 flex items-center justify-center text-gray-400"><i class="fas fa-search"></i></button>
+        </header>
 
-        <div id="viewContainer" class="pt-24 lg:pt-28 flex-1 flex flex-col">
-            
-            <!-- 首頁佈局 -->
-            <div id="homeView" class="view-transition">
-                <!-- 輪播大圖 -->
-                <section class="max-w-[1600px] mx-auto px-4 lg:px-12 mb-10">
+        <main id="viewContainer" class="pt-0">
+            <div id="homeView">
+                <section class="mb-6">
                     <div class="swiper mainSwiper">
                         <div class="swiper-wrapper" id="heroWrapper"></div>
                         <div class="swiper-pagination"></div>
                     </div>
                 </section>
 
-                <!-- 源頭站點切換 -->
-                <section class="max-w-[1600px] mx-auto px-4 lg:px-12 mb-6">
-                    <div class="flex items-center gap-4 bg-white/5 p-4 rounded-[2rem] border border-white/5 shadow-xl">
-                        <div class="shrink-0 flex items-center gap-2 px-4 border-r border-white/10 mr-2">
-                            <i class="fas fa-server text-amber-500 text-xs"></i>
-                            <span class="text-[10px] font-black text-gray-500 uppercase">源頭選擇</span>
-                        </div>
-                        <div id="sourceFilters" class="flex gap-3 overflow-x-auto hide-scroll">
-                            <!-- JS 生成 -->
-                        </div>
+                <section class="sticky top-[60px] z-[900] glass border-b border-white/5 py-3">
+                    <div class="flex flex-col gap-3">
+                        <div id="sourceFilters" class="flex gap-2 overflow-x-auto hide-scroll px-4"></div>
+                        <div id="cateFilters" class="flex gap-2 overflow-x-auto hide-scroll px-4"></div>
                     </div>
                 </section>
 
-                <!-- 作品類別瀏覽（這裡就是您要的作品分類：絲襪、電影、短劇等） -->
-                <section class="max-w-[1600px] mx-auto px-4 lg:px-12 mb-10">
-                    <div class="flex flex-col gap-4">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <span class="w-1.5 h-5 bg-red-600 rounded-full shadow-[0_0_10px_#e50914]"></span>
-                                <h3 class="text-base font-black text-white uppercase tracking-widest">作品類別瀏覽</h3>
-                            </div>
-                            <span class="text-[10px] text-gray-600 font-bold uppercase" id="sourceIndicator">Loading Source...</span>
+                <section class="px-4 py-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-2">
+                            <span class="w-1 h-4 bg-red-600 rounded-full"></span>
+                            <h2 id="listTitle" class="text-lg font-black text-white">熱播精選</h2>
                         </div>
-                        <div id="cateFilters" class="flex gap-3 overflow-x-auto hide-scroll pb-2 min-h-[50px] items-center">
-                            <!-- JS 加載分類按鈕 -->
+                        <div class="flex items-center gap-3">
+                            <span id="pageInfo" class="text-[10px] font-mono text-gray-600">1 / 99</span>
+                            <div class="flex gap-1">
+                                <button id="prevBtn" class="w-8 h-8 flex items-center justify-center bg-white/5 rounded-lg text-xs"><i class="fas fa-chevron-left"></i></button>
+                                <button id="nextBtn" class="w-8 h-8 flex items-center justify-center bg-white/5 rounded-lg text-xs"><i class="fas fa-chevron-right"></i></button>
+                            </div>
                         </div>
                     </div>
+                    <div id="movieGrid" class="grid grid-cols-2 gap-4"></div>
                 </section>
+            </div>
 
-                <!-- 主列表 -->
-                <div class="max-w-[1600px] mx-auto px-4 lg:px-12 pb-24 flex flex-col lg:flex-row gap-16">
-                    <div class="flex-grow order-2 lg:order-1">
-                        <div class="flex items-center justify-between mb-10">
-                            <div>
-                                <h2 id="listTitle" class="text-3xl font-black text-white">熱搜精選作品</h2>
-                                <p class="text-[10px] text-gray-600 font-bold uppercase tracking-[0.3em] mt-1">Real-time Data Fetching</p>
-                            </div>
-                            <div class="flex gap-4">
-                                <button id="prevBtn" class="w-12 h-12 flex items-center justify-center bg-white/5 rounded-2xl hover:bg-red-600 transition-all text-white disabled:opacity-20"><i class="fas fa-chevron-left"></i></button>
-                                <button id="nextBtn" class="w-12 h-12 flex items-center justify-center bg-white/5 rounded-2xl hover:bg-red-600 transition-all text-white"><i class="fas fa-chevron-right"></i></button>
-                            </div>
-                        </div>
-                        <div id="movieGrid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8"></div>
+            <div id="rankView" class="hidden px-4 pt-20 pb-10">
+                <h3 class="text-2xl font-black text-white mb-6"><i class="fas fa-fire-alt text-red-600 mr-2"></i>熱度榜單</h3>
+                <div id="rankList" class="flex flex-col gap-4"></div>
+            </div>
+
+            <div id="playView" class="hidden">
+                <div class="relative w-full aspect-video bg-black sticky top-0 z-[1100]">
+                    <iframe id="mainPlayer" class="w-full h-full border-none" allowfullscreen></iframe>
+                    <div id="playerLoading" class="absolute inset-0 flex items-center justify-center bg-slate-950 hidden">
+                        <div class="loader"></div>
                     </div>
-
-                    <!-- 排行榜 -->
-                    <div class="lg:w-[380px] shrink-0 order-1 lg:order-2">
-                        <div class="sticky top-32">
-                            <h3 class="text-2xl font-black text-white flex items-center gap-3 mb-8">
-                                <i class="fas fa-fire-alt text-red-600"></i> 熱度總榜
-                            </h3>
-                            <div id="rankList" class="flex flex-col gap-6 bg-white/5 p-8 rounded-[3rem] border border-white/5 shadow-2xl"></div>
-                        </div>
+                </div>
+                <div class="p-6">
+                    <button onclick="goHome()" class="text-[10px] font-bold text-gray-500 uppercase mb-4 flex items-center gap-1"><i class="fas fa-chevron-left"></i>返回</button>
+                    <h1 id="pTitle" class="text-2xl font-black text-white mb-2">載入中...</h1>
+                    <div id="epList" class="grid grid-cols-3 gap-2 mb-8 mt-4"></div>
+                    <div class="bg-white/5 p-4 rounded-2xl">
+                        <p id="pContent" class="text-xs text-gray-400 leading-relaxed"></p>
                     </div>
                 </div>
             </div>
+        </main>
 
-            <!-- 播放器 -->
-            <div id="playView" class="hidden view-transition pb-32">
-                <div class="max-w-[1600px] mx-auto px-4 lg:px-12 py-6">
-                    <button onclick="goHome()" class="mb-10 flex items-center gap-2 text-gray-500 hover:text-white transition-all group font-black uppercase text-xs tracking-widest">
-                        <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i> Back to Gallery
-                    </button>
-                    
-                    <div class="flex flex-col xl:flex-row gap-12">
-                        <div class="flex-1">
-                            <div class="player-wrapper">
-                                <iframe id="mainPlayer" allowfullscreen allow="autoplay; encrypted-media"></iframe>
-                                <div id="playerLoading" class="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center z-10 hidden">
-                                    <div class="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                                    <p class="text-[10px] text-red-600 font-black animate-pulse uppercase">Syncing Stream...</p>
-                                </div>
-                            </div>
-                            <div class="mt-12 bg-white/5 rounded-[3rem] p-10 border border-white/5">
-                                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                                    <div>
-                                        <div class="flex items-center gap-3 mb-3">
-                                            <span id="pType" class="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-lg">CINEMA</span>
-                                            <span id="pRemark" class="px-4 py-1 bg-white/10 text-gray-400 text-[10px] font-black rounded-lg">1080P</span>
-                                        </div>
-                                        <h1 id="pTitle" class="text-3xl lg:text-5xl font-black text-white tracking-tighter">影片標題</h1>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-[10px] text-gray-600 font-bold mb-1 italic">GLOBAL DATA HEAT</p>
-                                        <p id="pHeat" class="text-4xl font-black text-red-600">99.9</p>
-                                    </div>
-                                </div>
-                                <div id="pContent" class="text-gray-400 text-sm leading-loose max-w-4xl line-clamp-4"></div>
-                            </div>
-                        </div>
-                        <div class="w-full xl:w-[400px] shrink-0">
-                            <div class="bg-white/5 border border-white/5 rounded-[3rem] p-8 sticky top-32">
-                                <h3 class="font-black text-xl text-white flex items-center gap-3 mb-8"><i class="fas fa-play-circle text-red-600"></i> 選集播放</h3>
-                                <div id="epList" class="grid grid-cols-2 gap-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-2"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <nav class="bottom-nav glass">
+            <a href="javascript:void(0)" onclick="switchTab('home')" class="nav-item active" id="tab-home"><i class="fas fa-home"></i><span>精選</span></a>
+            <a href="javascript:void(0)" onclick="switchTab('rank')" class="nav-item" id="tab-rank"><i class="fas fa-chart-line"></i><span>榜單</span></a>
+            <a href="javascript:void(0)" onclick="toggleSearch()" class="nav-item"><i class="fas fa-search"></i><span>搜索</span></a>
+            <a href="javascript:void(0)" onclick="showToast('更多源優化中')" class="nav-item"><i class="fas fa-layer-group"></i><span>多源</span></a>
+        </nav>
+
+        <div id="searchOverlay" class="fixed inset-0 z-[2000] glass flex-col p-6 hidden">
+            <div class="flex items-center gap-4 mb-8">
+                <input id="mobileSearchInput" type="text" placeholder="全網極速搜索..." class="flex-1 bg-white/10 border border-white/10 rounded-full py-3 px-6 focus:outline-none text-white text-sm">
+                <button onclick="toggleSearch()" class="text-gray-400 font-bold text-sm">取消</button>
             </div>
         </div>
     </div>
 
-    <!-- Toast -->
-    <div id="toast" class="fixed bottom-12 left-1/2 -translate-x-1/2 bg-red-600 text-white px-8 py-4 rounded-full shadow-2xl opacity-0 transition-all transform translate-y-8 z-[6000] pointer-events-none text-xs font-black">
-        MESSAGE
-    </div>
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 glass px-6 py-3 rounded-full text-[10px] font-black text-white opacity-0 transition-all z-[3000] pointer-events-none"></div>
 
     <script>
         const CONFIG = {
@@ -253,309 +168,259 @@
                 { name: '奶香專源', url: 'https://naixxzy.com/api.php/provide/vod/' },
                 { name: '快車資源', url: 'https://caiji.kczyapi.com/api.php/provide/vod/' },
                 { name: '索尼資源', url: 'https://suoniapi.com/api.php/provide/vod/' },
-                { name: '量子資源', url: 'https://cj.lziapi.com/api.php/provide/vod/' },
-                { name: '紅牛資源', url: 'https://www.hongniuzy2.com/api.php/provide/vod/' }
+                { name: '量子資源', url: 'https://cj.lziapi.com/api.php/provide/vod/' }
             ],
             jx: 'https://mtjiexi.cc:966/?url=',
+            // 優化代理策略：優先直連，次選國內較快的代理
             proxies: [
-                (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&t=${Date.now()}`,
-                (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-                (url) => url
+                (url) => url, // 1. 優先嘗試直連（Direct Fetch）
+                (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&t=${Date.now()}`, // 2. 備選代理
+                (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` // 3. 保底代理
             ]
         };
 
         let state = {
-            page: 1, 
-            typeId: '', 
-            keyword: '', 
-            activeSourceIdx: 0, 
-            movies: [], 
-            classes: [], // 用於存放採集站返回的「作品分類」
-            swiper: null
+            page: 1, typeId: '', keyword: '', activeSourceIdx: 0,
+            movies: [], classes: [], swiper: null, currentTab: 'home'
         };
-
-        function calcHeat(hits, idx) {
-            const base = parseInt(hits) || 500;
-            return ((base * 0.5) + (Math.sin(idx) * 200) + 7000) / 100;
-        }
 
         function checkAccess() {
             if (document.getElementById('pwInput').value === CONFIG.pw) {
                 sessionStorage.setItem('naixx_auth_v4', 'true');
                 unlockSite();
             } else {
-                showToast('密碼錯誤，拒絕訪問');
+                showToast('訪問密碼錯誤');
             }
         }
 
         function unlockSite() {
-            document.getElementById('passwordView').classList.add('hidden');
-            const main = document.getElementById('mainApp');
-            main.classList.remove('hidden');
-            setTimeout(() => main.classList.add('opacity-100'), 50);
+            document.getElementById('passwordView').style.display = 'none';
+            const app = document.getElementById('mainApp');
+            app.classList.remove('hidden');
+            setTimeout(() => app.classList.add('opacity-100'), 50);
             initApp();
         }
 
+        // 優化：並行初始化，獲取分類和列表同時進行
         async function initApp() {
-            // 首次初始化：嘗試獲取分類
-            await ensureClassesLoaded();
-            await fetchData();
+            // 先嘗試從本地緩存讀取分類，實現秒開
+            const cachedClasses = localStorage.getItem(`classes_${state.activeSourceIdx}`);
+            if (cachedClasses) {
+                state.classes = JSON.parse(cachedClasses);
+                renderFilters();
+            }
+
+            Promise.all([
+                loadClasses(),
+                fetchData()
+            ]);
         }
 
-        // 重要：確保作品分類加載。如果數據中沒有分類，主動請求一次 API 列表
-        async function ensureClassesLoaded() {
-            if (state.classes.length > 0) return;
-            const sourceUrl = CONFIG.sources[state.activeSourceIdx].url;
-            // 使用 ac=list 通常可以直接獲取到分類列表
-            let target = `${sourceUrl}?ac=list`;
-            
-            for (const proxyFn of CONFIG.proxies) {
-                try {
-                    const resp = await fetch(proxyFn(target));
-                    if (!resp.ok) continue;
-                    let data = await resp.json();
-                    if (data.contents) data = JSON.parse(data.contents);
-                    const res = Array.isArray(data) ? data[0] : data;
-                    if (res && res.class) {
-                        state.classes = res.class;
-                        renderUI(); // 立即渲染分類區域
-                        break;
-                    }
-                } catch(e) {}
+        async function loadClasses() {
+            const url = `${CONFIG.sources[state.activeSourceIdx].url}?ac=list`;
+            const data = await smartFetch(url);
+            if (data && data.class) {
+                state.classes = data.class;
+                // 存入緩存
+                localStorage.setItem(`classes_${state.activeSourceIdx}`, JSON.stringify(data.class));
+                renderFilters();
             }
         }
 
         async function fetchData(page = 1) {
-            showSkeleton();
-            const sourceUrl = CONFIG.sources[state.activeSourceIdx].url;
-            let target = `${sourceUrl}?ac=detail&pg=${page}${state.typeId ? '&t='+state.typeId : ''}${state.keyword ? '&wd='+encodeURIComponent(state.keyword) : ''}`;
+            renderSkeleton();
+            const source = CONFIG.sources[state.activeSourceIdx].url;
+            const target = `${source}?ac=detail&pg=${page}${state.typeId ? '&t='+state.typeId : ''}${state.keyword ? '&wd='+encodeURIComponent(state.keyword) : ''}`;
             
-            let success = false;
+            const data = await smartFetch(target);
+            if (data && data.list) {
+                state.movies = data.list.map(m => ({ ...m, heat: (Math.random()*20 + 79.5).toFixed(1) }));
+                state.page = parseInt(data.page);
+                renderUI();
+            } else {
+                showToast('當前線路繁忙，請換源');
+            }
+        }
+
+        // 核心加速邏輯：帶超時機制的智能請求
+        async function smartFetch(url) {
             for (const proxyFn of CONFIG.proxies) {
-                if (success) break;
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 4000);
-                    const resp = await fetch(proxyFn(target), { signal: controller.signal });
+                    const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5秒不返回直接換下一個代理
+                    
+                    const resp = await fetch(proxyFn(url), { signal: controller.signal });
                     clearTimeout(timeoutId);
-                    if (!resp.ok) continue;
-                    let data = await resp.json();
-                    if (data.contents) data = JSON.parse(data.contents);
-                    const res = Array.isArray(data) ? data[0] : data;
-                    if (res && res.list) {
-                        state.movies = res.list.map((m, i) => ({ ...m, heat: calcHeat(m.vod_hits, i).toFixed(1) }));
-                        state.page = parseInt(res.page);
-                        // 如果這次請求也返回了分類，更新它
-                        if (res.class && res.class.length > 0) state.classes = res.class;
-                        renderUI();
-                        success = true;
-                    }
-                } catch (e) {}
+                    
+                    let result = await resp.json();
+                    // 處理 allorigins 等代理返回的嵌套結構
+                    if (result.contents) result = JSON.parse(result.contents);
+                    const final = Array.isArray(result) ? result[0] : result;
+                    
+                    if (final) return final;
+                } catch (e) {
+                    continue; // 失敗則嘗試下一個
+                }
             }
-            if (!success) showToast('數據加載失敗，請切換站點');
+            return null;
         }
 
         function renderUI() {
             renderGrid();
-            renderSourcePills();
-            renderWorksCategories(); // 作品分類
-            renderPCNav(); // 頂部分類
-            
-            document.getElementById('sourceIndicator').innerText = `SOURCE: ${CONFIG.sources[state.activeSourceIdx].name}`;
-            
-            if (state.page === 1 && !state.typeId && !state.keyword) {
-                renderHero();
-                renderRank();
-            }
-            
-            document.getElementById('pageInfo')?.remove();
-            const pageSpan = `<span id="pageInfo" class="text-xs font-mono text-red-600">${state.page} / 99</span>`;
-            document.getElementById('nextBtn').insertAdjacentHTML('beforebegin', pageSpan);
+            renderHero();
+            renderRank();
+            renderFilters();
+            document.getElementById('pageInfo').innerText = `${state.page} / 99`;
         }
 
-        function renderSourcePills() {
-            const container = document.getElementById('sourceFilters');
-            container.innerHTML = CONFIG.sources.map((s, idx) => `
-                <button onclick="switchSource(${idx})" class="source-pill px-6 py-2 rounded-xl text-[10px] font-black whitespace-nowrap uppercase tracking-widest ${state.activeSourceIdx === idx ? 'active' : 'bg-white/5 text-gray-500'}">
-                    ${s.name}
-                </button>
+        function renderFilters() {
+            const sContainer = document.getElementById('sourceFilters');
+            sContainer.innerHTML = CONFIG.sources.map((s, idx) => `
+                <button onclick="switchSource(${idx})" class="pill ${state.activeSourceIdx === idx ? 'active' : ''}">${s.name}</button>
             `).join('');
-        }
 
-        // 作品分類渲染 (絲襪、電影、短劇等)
-        function renderWorksCategories() {
-            const container = document.getElementById('cateFilters');
-            if (state.classes.length === 0) {
-                container.innerHTML = `<div class="text-[10px] text-gray-600 animate-pulse">分類加載中...</div>`;
-                return;
-            }
-            
-            let html = `<button onclick="switchType('', this)" class="cate-pill px-8 py-2.5 rounded-2xl text-[10px] font-black whitespace-nowrap ${!state.typeId?'active':'text-gray-500'}">全部</button>`;
+            const cContainer = document.getElementById('cateFilters');
+            let html = `<button onclick="switchType('', this)" class="pill ${!state.typeId ? 'active' : ''}">全部</button>`;
             html += state.classes.map(c => `
-                <button onclick="switchType('${c.type_id}', this)" class="cate-pill px-8 py-2.5 rounded-2xl text-[10px] font-black whitespace-nowrap ${state.typeId == c.type_id?'active':'text-gray-500'}">
-                    ${c.type_name}
-                </button>
+                <button onclick="switchType('${c.type_id}', this)" class="pill ${state.typeId == c.type_id ? 'active' : ''}">${c.type_name}</button>
             `).join('');
-            container.innerHTML = html;
-        }
-
-        function renderPCNav() {
-            const nav = document.getElementById('pcNav');
-            let html = `<a href="javascript:void(0)" onclick="switchType('', null)" class="transition-colors ${!state.typeId?'text-red-600':'hover:text-white'}">首頁</a>`;
-            html += state.classes.slice(0, 10).map(c => `
-                <a href="javascript:void(0)" onclick="switchType('${c.type_id}', null)" class="transition-colors ${state.typeId == c.type_id?'text-red-600':'hover:text-white'}">
-                    ${c.type_name}
-                </a>
-            `).join('');
-            nav.innerHTML = html;
+            cContainer.innerHTML = html;
         }
 
         function renderGrid() {
             const grid = document.getElementById('movieGrid');
             grid.innerHTML = state.movies.map((m, i) => `
-                <div class="movie-card group cursor-pointer" onclick="openPlayer(${i})">
-                    <div class="relative aspect-[3/4.5] overflow-hidden rounded-[2.2rem] bg-slate-800 border border-white/5 shadow-2xl">
-                        <img src="${m.vod_pic}" class="w-full h-full object-cover transition-all duration-700" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450?text=NAIXX'">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent opacity-60"></div>
-                        <div class="absolute bottom-4 left-4 heat-badge text-[9px] font-black px-2.5 py-1 rounded-lg text-white shadow-lg">
-                            <i class="fas fa-fire-alt mr-1"></i> HEAT: ${m.heat}
-                        </div>
-                        <div class="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-[9px] font-black px-2 py-1 rounded-lg border border-white/10 text-white">${m.vod_remarks || 'HD'}</div>
-                    </div>
-                    <div class="mt-5 px-1">
-                        <h3 class="font-bold text-slate-100 truncate group-hover:text-red-600 transition-colors">${m.vod_name}</h3>
-                        <p class="text-[10px] text-gray-600 font-bold uppercase mt-1 tracking-widest">${m.type_name} · ${m.vod_year}</p>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderRank() {
-            const container = document.getElementById('rankList');
-            const top = [...state.movies].sort((a,b) => b.heat - a.heat).slice(0, 10);
-            container.innerHTML = top.map((m, idx) => `
-                <div class="flex items-center gap-5 cursor-pointer group" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
-                    <span class="rank-num rank-${idx+1} text-3xl w-8 text-center text-gray-800">${idx + 1}</span>
-                    <div class="w-10 h-14 rounded-lg overflow-hidden bg-slate-800 shrink-0 border border-white/5">
-                        <img src="${m.vod_pic}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/300x450?text=NAIXX'">
-                    </div>
-                    <div class="flex-grow overflow-hidden">
-                        <h4 class="text-xs font-black text-white truncate group-hover:text-red-600 transition-colors">${m.vod_name}</h4>
-                        <div class="flex items-center gap-2 mt-2">
-                            <div class="h-1 flex-1 bg-white/5 rounded-full overflow-hidden"><div class="h-full bg-red-600" style="width: ${m.heat}%"></div></div>
-                            <span class="text-[9px] text-red-600 font-black">${m.heat}</span>
+                <div class="movie-card animate-fade-in" onclick="openPlayer(${i})">
+                    <div class="relative mb-2">
+                        <img src="${m.vod_pic}" loading="lazy" onerror="this.src='https://via.placeholder.com/200x300?text=NAIXX'">
+                        <div class="absolute bottom-2 left-2 bg-red-600/90 backdrop-blur text-[8px] font-black px-1.5 py-0.5 rounded text-white italic">
+                            RANK ${m.heat}
                         </div>
                     </div>
+                    <h3 class="text-xs font-bold text-gray-200 truncate">${m.vod_name}</h3>
+                    <p class="text-[9px] text-gray-600 font-bold mt-0.5">${m.type_name} / ${m.vod_remarks}</p>
                 </div>
             `).join('');
         }
 
         function renderHero() {
-            const slider = document.getElementById('heroWrapper');
+            const wrapper = document.getElementById('heroWrapper');
             const hots = state.movies.slice(0, 5);
-            slider.innerHTML = hots.map(m => `
-                <div class="swiper-slide cursor-pointer" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
-                    <img src="${m.vod_pic}" class="absolute inset-0 w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/300x450?text=NAIXX'">
-                    <div class="slide-overlay px-10 lg:px-20">
-                        <div class="max-w-3xl">
-                            <div class="inline-flex items-center gap-2 bg-red-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full mb-6">
-                                <i class="fas fa-satellite"></i> DATA SOURCE: ${CONFIG.sources[state.activeSourceIdx].name}
-                            </div>
-                            <h2 class="text-4xl lg:text-7xl font-black text-white mb-8 tracking-tighter line-clamp-2">${m.vod_name}</h2>
-                            <button class="bg-red-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 shadow-xl">
-                                <i class="fas fa-play"></i> START WATCHING
-                            </button>
+            wrapper.innerHTML = hots.map(m => `
+                <div class="swiper-slide relative" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
+                    <img src="${m.vod_pic}" class="w-full h-full object-cover">
+                    <div class="slide-overlay">
+                        <h2 class="text-2xl font-black text-white leading-tight mb-2 line-clamp-2">${m.vod_name}</h2>
+                        <div class="flex items-center gap-2 text-red-500 text-[10px] font-black">
+                            <span>PREMIUM DATA</span><span>•</span><span>${m.vod_year}</span>
                         </div>
                     </div>
                 </div>
             `).join('');
             if (state.swiper) state.swiper.destroy();
-            state.swiper = new Swiper(".mainSwiper", { pagination: { el: ".swiper-pagination", clickable: true }, autoplay: { delay: 5000 }, loop: true, effect: 'fade' });
+            state.swiper = new Swiper(".mainSwiper", { 
+                pagination: { el: ".swiper-pagination" }, 
+                autoplay: { delay: 5000 }, 
+                loop: true,
+                speed: 1000
+            });
         }
 
-        window.openPlayer = function(idx) { openPlayerWithData(state.movies[idx]); };
-        
-        window.openPlayerWithData = function(m) {
-            state.current = m;
-            document.getElementById('homeView').classList.add('hidden');
-            document.getElementById('playView').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            document.getElementById('pTitle').innerText = m.vod_name;
-            document.getElementById('pType').innerText = m.type_name;
-            document.getElementById('pRemark').innerText = m.vod_remarks || '1080P';
-            document.getElementById('pHeat').innerText = m.heat;
-            document.getElementById('pContent').innerText = (m.vod_content || '暫無介紹內容。').replace(/<[^>]+>/g, '');
-            renderEpisodes();
+        function renderRank() {
+            const list = document.getElementById('rankList');
+            const sorted = [...state.movies].sort((a,b) => b.heat - a.heat).slice(0, 10);
+            list.innerHTML = sorted.map((m, i) => `
+                <div class="flex items-center gap-4 bg-white/5 p-3 rounded-2xl" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
+                    <span class="text-xl font-black italic ${i<3 ? 'text-red-600' : 'text-gray-800'} w-6">${i+1}</span>
+                    <img src="${m.vod_pic}" class="w-12 h-16 rounded-lg object-cover">
+                    <div class="flex-1 overflow-hidden">
+                        <h4 class="text-xs font-bold text-white truncate">${m.vod_name}</h4>
+                        <p class="text-[9px] text-gray-600 mt-1">${m.type_name} · 熱度 ${m.heat}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.switchTab = function(tab) {
+            state.currentTab = tab;
+            document.getElementById('homeView').style.display = tab === 'home' ? 'block' : 'none';
+            document.getElementById('rankView').style.display = tab === 'rank' ? 'block' : 'none';
+            document.getElementById('playView').style.display = 'none';
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            window.scrollTo(0,0);
         };
 
-        function renderEpisodes() {
-            const m = state.current;
-            const urlData = m.vod_play_url.split('$$$')[0]; 
-            const eps = urlData.split('#').filter(l => l.includes('$')).map(l => {
-                const [n, u] = l.split('$');
-                return { n, u };
-            });
-            const list = document.getElementById('epList');
-            list.innerHTML = eps.map(e => `<button onclick="playUrl('${e.u}', this)" class="ep-item bg-white/5 border border-white/5 py-3 rounded-xl text-[10px] text-gray-400 font-bold hover:border-red-600 hover:text-white transition-all truncate px-2">${e.n}</button>`).join('');
-            if (eps.length > 0) playUrl(eps[0].u, list.firstElementChild);
-        }
+        window.openPlayer = (idx) => openPlayerWithData(state.movies[idx]);
 
-        window.playUrl = function(u, btn) {
-            document.querySelectorAll('.ep-item').forEach(b => b.classList.remove('bg-red-600', 'text-white', 'border-red-600'));
-            if (btn) btn.classList.add('bg-red-600', 'text-white', 'border-red-600');
+        window.openPlayerWithData = (m) => {
+            state.current = m;
+            document.getElementById('homeView').style.display = 'none';
+            document.getElementById('rankView').style.display = 'none';
+            document.getElementById('playView').style.display = 'block';
+            window.scrollTo(0,0);
+            
+            document.getElementById('pTitle').innerText = m.vod_name;
+            document.getElementById('pContent').innerText = (m.vod_content || '暫無介紹').replace(/<[^>]+>/g, '');
+            
+            const urlData = m.vod_play_url.split('$$$')[0];
+            const eps = urlData.split('#').map(l => {
+                const parts = l.split('$');
+                return { n: parts[0], u: parts[1] };
+            }).filter(e => e.u);
+
+            const list = document.getElementById('epList');
+            list.innerHTML = eps.map(e => `<button onclick="playUrl('${e.u}', this)" class="bg-white/5 border border-white/10 py-2 rounded-lg text-[10px] text-gray-400 truncate px-1 font-bold">${e.n}</button>`).join('');
+            if (eps.length > 0) playUrl(eps[0].u, list.firstElementChild);
+        };
+
+        window.playUrl = (u, btn) => {
+            document.querySelectorAll('#epList button').forEach(b => b.className = 'bg-white/5 border border-white/10 py-2 rounded-lg text-[10px] text-gray-400 truncate px-1 font-bold');
+            if (btn) btn.className = 'bg-red-600 border-red-600 py-2 rounded-lg text-[10px] text-white truncate px-1 font-bold';
+            
             const loader = document.getElementById('playerLoading');
-            loader.classList.remove('hidden');
             const iframe = document.getElementById('mainPlayer');
+            loader.classList.remove('hidden');
             iframe.src = CONFIG.jx + encodeURIComponent(u.trim());
             iframe.onload = () => loader.classList.add('hidden');
         };
 
-        window.goHome = function() {
-            document.getElementById('homeView').classList.remove('hidden');
-            document.getElementById('playView').classList.add('hidden');
-            document.getElementById('mainPlayer').src = '';
+        window.goHome = () => switchTab('home');
+
+        window.toggleSearch = () => {
+            const el = document.getElementById('searchOverlay');
+            el.classList.toggle('hidden');
+            el.classList.toggle('flex');
+            if (!el.classList.contains('hidden')) document.getElementById('mobileSearchInput').focus();
         };
 
-        window.switchSource = async function(idx) {
-            if (state.activeSourceIdx === idx) return;
-            state.activeSourceIdx = idx;
-            state.page = 1;
-            state.typeId = '';
-            state.keyword = '';
-            state.classes = []; 
-            showToast(`切換源至：${CONFIG.sources[idx].name}`);
-            await ensureClassesLoaded(); // 先重新獲取該源的分類
+        window.switchSource = async (idx) => {
+            state.activeSourceIdx = idx; state.page = 1; state.classes = [];
+            showToast(`正在切換線路...`);
+            await initApp();
+        };
+
+        window.switchType = (id, btn) => {
+            state.typeId = id; state.page = 1;
             fetchData(1);
+            window.scrollTo(0,0);
         };
 
-        window.switchType = function(id, btn) {
-            state.typeId = id; state.page = 1; state.keyword = '';
-            fetchData(1);
-            if (btn) {
-                document.querySelectorAll('.cate-pill').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            }
-        };
-
-        function showSkeleton() {
-            document.getElementById('movieGrid').innerHTML = Array(10).fill('<div class="bg-white/5 aspect-[3/4.5] rounded-[2.2rem] animate-pulse"></div>').join('');
+        function renderSkeleton() {
+            document.getElementById('movieGrid').innerHTML = Array(6).fill('<div class="skeleton aspect-[2/3] rounded-2xl"></div>').join('');
         }
 
         function showToast(m) {
             const t = document.getElementById('toast');
-            t.innerText = m;
-            t.classList.replace('opacity-0', 'opacity-100');
-            t.classList.replace('translate-y-8', 'translate-y-0');
-            setTimeout(() => {
-                t.classList.replace('opacity-100', 'opacity-0');
-                t.classList.replace('translate-y-0', 'translate-y-8');
-            }, 3000);
+            t.innerText = m; t.style.opacity = '1'; t.style.bottom = '100px';
+            setTimeout(() => { t.style.opacity = '0'; t.style.bottom = '80px'; }, 2000);
         }
 
-        document.getElementById('pcSearch').onkeypress = (e) => {
+        document.getElementById('mobileSearchInput').onkeypress = (e) => {
             if (e.key === 'Enter') {
                 state.keyword = e.target.value;
                 state.page = 1;
+                toggleSearch();
                 fetchData(1);
             }
         };
