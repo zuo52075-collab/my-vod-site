@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="referrer" content="no-referrer">
-    <title>极速蓝光影视 - Free Cinema</title> <!-- 默認標題改為安全的 -->
+    <title>极速蓝光影视 - Free Cinema</title>
     <!-- 核心庫 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.js"></script>
     
     <script>
-        // --- 設備檢測邏輯 (第一性原理：大屏即PC) ---
+        // --- 設備檢測邏輯 ---
         function detectDevice() {
             const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             const isWideScreen = window.innerWidth > 768;
@@ -130,7 +130,6 @@
 </head>
 <body class="pb-24">
 
-    <!-- PC端左側廣告位 (智能變換文案) -->
     <div class="pc-tip animate-fade-in">
         <h1 class="text-6xl font-black mb-4 tracking-tighter" id="pcTitle">VIP<span class="text-red-600">.</span></h1>
         <p class="text-gray-400 mb-8 text-lg font-light">極致觀影 · 暢享絲滑<br>適配 PC 智能模擬器</p>
@@ -142,10 +141,8 @@
         </div>
     </div>
 
-    <!-- 核心容器 -->
     <div id="app-wrapper">
 
-        <!-- 登錄驗證：入口 -->
         <div id="passwordView" class="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-slate-950 fixed-w-limit">
             <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, #e50914 1px, transparent 0); background-size: 24px 24px;"></div>
             <div class="relative w-full max-w-sm bg-slate-900/80 backdrop-blur-xl border border-white/10 p-10 rounded-[2.5rem] shadow-2xl text-center">
@@ -160,13 +157,11 @@
         </div>
 
         <div id="mainApp" class="hidden opacity-0 transition-opacity duration-700">
-            <!-- Header -->
             <header class="fixed top-0 w-full z-[1000] glass mobile-header px-6 flex items-center justify-between fixed-w-limit">
                 <div class="flex items-center gap-2 cursor-pointer" onclick="goHome()">
                     <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg">
                         <i id="logoIcon" class="fas fa-play text-white text-[10px]"></i>
                     </div>
-                    <!-- Logo文字動態變化 -->
                     <span id="appTitle" class="text-lg font-black tracking-tighter text-white uppercase">CINEMA</span>
                 </div>
                 <button onclick="toggleSearch()" class="w-10 h-10 flex items-center justify-center text-gray-400 cursor-pointer hover:text-white"><i class="fas fa-search"></i></button>
@@ -181,11 +176,13 @@
                         </div>
                     </section>
 
-                    <!-- Filter 篩選區 -->
                     <section class="relative z-[900] glass border-b border-white/5 py-3 fixed-w-limit">
                         <div class="flex flex-col gap-3">
                             <div id="sourceFilters" class="flex gap-2 overflow-x-auto hide-scroll px-4"></div>
-                            <div id="cateFilters" class="flex gap-2 overflow-x-auto hide-scroll px-4"></div>
+                            <!-- 分類欄：保證是自動加載的 -->
+                            <div id="cateFilters" class="flex gap-2 overflow-x-auto hide-scroll px-4 min-h-[40px] items-center">
+                                <span class="text-[10px] text-gray-500 animate-pulse">正在同步分類庫...</span>
+                            </div>
                         </div>
                     </section>
 
@@ -198,7 +195,6 @@
                         </div>
                         <div id="movieGrid" class="grid grid-cols-2 gap-4"></div>
 
-                        <!-- 底部分頁器 -->
                         <div class="mt-12 mb-8 flex flex-col items-center gap-6 p-4 bg-white/5 rounded-[2rem] border border-white/5">
                             <div class="flex items-center gap-4">
                                 <button onclick="fetchData(state.page - 1)" class="page-btn text-gray-400 hover:text-white"><i class="fas fa-arrow-left mr-2"></i>上一頁</button>
@@ -234,7 +230,6 @@
                             <p id="pContent" class="text-xs text-gray-400 leading-relaxed"></p>
                         </div>
 
-                        <!-- 隨機推薦板塊 -->
                         <div class="mt-10">
                             <div class="flex items-center justify-between mb-6">
                                 <div class="flex items-center gap-2">
@@ -245,15 +240,12 @@
                                     <i class="fas fa-sync-alt"></i> 換一批
                                 </button>
                             </div>
-                            <div id="recommendGrid" class="grid grid-cols-2 gap-4">
-                                <!-- 推薦作品 -->
-                            </div>
+                            <div id="recommendGrid" class="grid grid-cols-2 gap-4"></div>
                         </div>
                     </div>
                 </div>
             </main>
 
-            <!-- Bottom Nav -->
             <nav class="bottom-nav glass fixed-w-limit">
                 <a href="javascript:void(0)" onclick="switchTab('home')" class="nav-item active" id="tab-home"><i class="fas fa-home"></i><span>精選</span></a>
                 <a href="javascript:void(0)" onclick="switchTab('rank')" class="nav-item" id="tab-rank"><i class="fas fa-chart-line"></i><span>榜單</span></a>
@@ -269,31 +261,48 @@
             </div>
         </div>
     </div>
-    <!-- End of app-wrapper -->
-
     <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 glass px-6 py-3 rounded-full text-[10px] font-black text-white opacity-0 transition-all z-[3000] pointer-events-none fixed-w-limit"></div>
 
     <script>
-        // 核心配置：雙重源定義
-        // 0: 奶香專源 (敏感)
-        // 1: 虎牙資源 (安全)
+        // 核心配置：资源池 (顺序很重要)
         const RAW_SOURCES = [
             { 
-                name: '奶香專源', 
+                name: '無水印源', // Index 0: 這裡面分類最全 (無碼/中文字幕)
+                url: 'https://api.wsyzy.net/api.php/provide/vod/',
+                parser: 'https://wsyzy.top/m3u8/?url='
+            },
+            { 
+                name: '奶香專源', // Index 1
                 url: 'https://naixxzy.com/api.php/provide/vod/',
                 parser: 'https://mtjiexi.cc:966/?url='
             },
+            {
+                name: '幸資源', // Index 2: 永久免費無廣告
+                url: 'https://xzybb1.com/api.php/provide/vod/',
+                parser: 'https://19xzy.com/?url='
+            },
             { 
-                name: '極速藍光', // 虎牙在列表裡改個好聽的名字
+                name: '極速藍光', // Index 3: 虎牙 (安全門面)
                 url: 'https://www.huyaapi.com/api.php/provide/vod/from/hym3u8/at/json', 
                 parser: 'https://huyajx.com/play/?url='
+            },
+            { 
+                name: '魔都資源', // Index 4
+                url: 'https://www.mdzyapi.com/api.php/provide/vod/', 
+                parser: 'https://jiexi.modujx01.com/?url='
+            },
+            { 
+                name: '新浪資源', // Index 5
+                url: 'https://api.xinlangapi.com/xinlangapi.php/provide/vod/from/xlm3u8/at/json', 
+                parser: 'https://www.xinlangjiexi.com/m3u8/?url='
             }
         ];
 
         let CONFIG = {
-            sources: [], // 動態加載
+            sources: [], 
             proxies: [
                 (url) => url, 
+                (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
                 (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&t=${Date.now()}`,
                 (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
             ]
@@ -305,16 +314,12 @@
             allPool: [], mode: 'none'
         };
 
-        // --- 陰陽密碼邏輯 ---
         function checkAccess() {
             const input = document.getElementById('pwInput').value;
-            
             if (input === '199688') {
-                // 綠色模式：只加載虎牙
                 localStorage.setItem('naixx_auth_mode', 'safe');
                 unlockSite('safe');
             } else if (input === '1996') {
-                // 全開模式：加載所有
                 localStorage.setItem('naixx_auth_mode', 'full');
                 unlockSite('full');
             } else {
@@ -327,38 +332,38 @@
             const app = document.getElementById('mainApp');
             app.classList.remove('hidden');
             setTimeout(() => app.classList.add('opacity-100'), 50);
-            
-            // 初始化數據
             initMode(modeStr);
         }
 
         function initMode(modeStr) {
             state.mode = modeStr;
             if (modeStr === 'safe') {
-                // 安全模式配置
-                CONFIG.sources = [RAW_SOURCES[1]]; // 只取虎牙
+                // 安全模式：只保留虎牙 (index 3 in RAW_SOURCES)
+                CONFIG.sources = [RAW_SOURCES[3]]; 
                 document.title = '極速藍光影視 - Free Cinema';
-                document.getElementById('appTitle').innerText = 'BlueRay'; // 改Logo文字
+                document.getElementById('appTitle').innerText = 'BlueRay';
                 document.getElementById('pcTitle').innerText = 'HD';
-                state.activeSourceIdx = 0; // 重置為0，因為數組只有1個元素了
+                state.activeSourceIdx = 0; 
             } else {
-                // 全開模式配置
-                CONFIG.sources = RAW_SOURCES; // 全取
+                // 全開模式：所有資源，無水印排第一
+                CONFIG.sources = RAW_SOURCES; 
                 document.title = '奶香香影視 - Premium Cinema';
                 document.getElementById('appTitle').innerText = 'Naixx';
                 document.getElementById('pcTitle').innerText = 'NAIXX.';
-                state.activeSourceIdx = 0; // 默認奶香
+                state.activeSourceIdx = 0; // 默認無水印源
             }
-            
-            // 開始加載
             initApp();
         }
 
         async function initApp() {
-            // 清理舊緩存，防止串台
+            // 切換源時清空分類顯示，避免用戶誤會是自定義的
+            document.getElementById('cateFilters').innerHTML = '<span class="text-[10px] text-gray-500 animate-pulse">正在同步分類庫...</span>';
+            
+            // 清理舊緩存
             const cacheKey = `classes_${state.mode}_${state.activeSourceIdx}`;
             const cachedClasses = localStorage.getItem(cacheKey);
             
+            // 先加載緩存的，但也後台刷新
             if (cachedClasses) {
                 state.classes = JSON.parse(cachedClasses);
                 renderFilters();
@@ -369,13 +374,26 @@
         }
 
         async function loadClasses() {
-            const url = `${CONFIG.sources[state.activeSourceIdx].url}?ac=list`;
+            // 核心修復：確保 ac=list 參數正確，去除路徑中的 at/json 等干擾
+            // 有些接口如果不傳 ac=list，會返回視頻列表而不是分類列表
+            let baseUrl = CONFIG.sources[state.activeSourceIdx].url;
+            
+            // 如果url包含了 at/json 或 at/xml，先去掉，因為我們要請求的是根目錄的 ac=list
+            baseUrl = baseUrl.replace('at/json', '').replace('at/xml', '');
+            
+            // 確保以 ?ac=list 或 &ac=list 結尾
+            const joinChar = baseUrl.includes('?') ? '&' : '?';
+            const url = `${baseUrl}${joinChar}ac=list`;
+
             const data = await fastRaceFetch(url);
             if (data && data.class) {
                 state.classes = data.class;
                 const cacheKey = `classes_${state.mode}_${state.activeSourceIdx}`;
                 localStorage.setItem(cacheKey, JSON.stringify(data.class));
+                showToast(`已同步 ${data.class.length} 個分類`); // 提示用戶是實時獲取的
                 renderFilters();
+            } else {
+                console.log("No class data found", data);
             }
         }
 
@@ -403,7 +421,7 @@
         async function fastRaceFetch(url) {
             const fetchTasks = CONFIG.proxies.map(async (proxyFn) => {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 6000);
+                const timeoutId = setTimeout(() => controller.abort(), 3500); 
                 try {
                     const resp = await fetch(proxyFn(url), { signal: controller.signal });
                     clearTimeout(timeoutId);
@@ -435,9 +453,14 @@
 
             const cContainer = document.getElementById('cateFilters');
             let html = `<button onclick="switchType('', this)" class="pill ${!state.typeId ? 'active' : ''}">全部</button>`;
-            html += state.classes.map(c => `
-                <button onclick="switchType('${c.type_id}', this)" class="pill ${state.typeId == c.type_id ? 'active' : ''}">${c.type_name}</button>
-            `).join('');
+            
+            if (state.classes && state.classes.length > 0) {
+                html += state.classes.map(c => `
+                    <button onclick="switchType('${c.type_id}', this)" class="pill ${state.typeId == c.type_id ? 'active' : ''}">${c.type_name}</button>
+                `).join('');
+            } else {
+                html = '<span class="text-[10px] text-gray-500">暫無分類數據</span>';
+            }
             cContainer.innerHTML = html;
         }
 
