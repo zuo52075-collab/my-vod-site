@@ -4,18 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="referrer" content="no-referrer">
-    <title>奶香香影視 - Premium Cinema</title>
+    <title>极速蓝光影视 - Free Cinema</title> <!-- 默認標題改為安全的 -->
     <!-- 核心庫 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.js"></script>
     
+    <script>
+        // --- 設備檢測邏輯 (第一性原理：大屏即PC) ---
+        function detectDevice() {
+            const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isWideScreen = window.innerWidth > 768;
+            if (isWideScreen || !isMobileUA) {
+                document.documentElement.classList.add('is-desktop');
+            } else {
+                document.documentElement.classList.remove('is-desktop');
+            }
+        }
+        detectDevice();
+        window.addEventListener('resize', detectDevice);
+    </script>
+
     <style>
         :root { 
             --main-red: #e50914; 
             --bg-deep: #06090f;
-            --glass: rgba(15, 23, 42, 0.8);
+            --glass: rgba(15, 23, 42, 0.98);
         }
         body { 
             background-color: var(--bg-deep); 
@@ -25,24 +40,67 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        /* --- PC端適配樣式 --- */
+        html.is-desktop body {
+            background-image: url('https://images.unsplash.com/photo-1616530940355-351fabd9524b?q=80&w=2835&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+        }
+
+        html.is-desktop #app-wrapper {
+            width: 100%;
+            max-width: 450px;
+            height: 90vh;
+            max-height: 850px;
+            background-color: var(--bg-deep);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        html.is-desktop #app-wrapper::-webkit-scrollbar { width: 0px; background: transparent; }
+        html.is-desktop #app-wrapper { -ms-overflow-style: none; scrollbar-width: none; }
+        #app-wrapper { width: 100%; min-height: 100vh; }
+
         .glass { background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        
         .mobile-header { height: 60px; }
-        .swiper { width: 100%; height: 40vh; max-height: 500px; border-radius: 0 0 1.5rem 1.5rem; }
+        
+        html.is-desktop .fixed-w-limit { 
+            position: absolute; width: 100%; left: 0; transform: none; 
+            border-radius: 24px 24px 0 0; 
+        }
+        html.is-desktop .bottom-nav.fixed-w-limit {
+            border-radius: 0 0 24px 24px; bottom: 0;
+        }
+        html.is-desktop #passwordView, html.is-desktop #searchOverlay { border-radius: 24px; }
 
+        .swiper { width: 100%; height: 260px; border-radius: 0 0 1.5rem 1.5rem; }
         .slide-overlay { 
             background: linear-gradient(to top, var(--bg-deep) 15%, transparent 100%);
-            position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 2rem; z-index: 10;
+            position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 1.5rem; z-index: 10;
         }
-
-        .movie-card img { aspect-ratio: 2/3; object-fit: cover; border-radius: 1rem; background: #1e293b; }
+        .movie-card img { aspect-ratio: 2/3; object-fit: cover; border-radius: 0.75rem; background: #1e293b; transition: transform 0.3s; }
+        .movie-card:active img { transform: scale(0.98); }
         
         .pill { 
-            white-space: nowrap; padding: 0.5rem 1.2rem; border-radius: 99px; 
+            white-space: nowrap; padding: 0.4rem 1rem; border-radius: 99px; 
             font-size: 0.75rem; font-weight: 600; transition: all 0.3s;
             background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
         }
+        .pill:hover { background: rgba(255,255,255,0.15); }
         .pill.active { background: var(--main-red); border-color: var(--main-red); color: white; box-shadow: 0 4px 12px rgba(229, 9, 20, 0.3); }
 
         .bottom-nav { 
@@ -51,9 +109,10 @@
             z-index: 2000; border-top: 1px solid rgba(255,255,255,0.05);
             padding-bottom: env(safe-area-inset-bottom);
         }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #64748b; font-size: 10px; font-weight: bold; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #64748b; font-size: 10px; font-weight: bold; cursor: pointer; }
         .nav-item.active { color: var(--main-red); }
         .nav-item i { font-size: 1.2rem; }
+        .nav-item:hover { color: #f8fafc; }
 
         .loader { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--main-red); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -61,145 +120,178 @@
         .skeleton { background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
         @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        /* 分頁專用樣式 */
         .page-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); width: 50px; text-align: center; border-radius: 8px; font-size: 12px; height: 32px; color: white; }
-        .page-btn { padding: 8px 16px; background: rgba(255,255,255,0.05); border-radius: 12px; font-weight: bold; font-size: 12px; transition: all 0.2s; }
+        .page-btn { padding: 8px 16px; background: rgba(255,255,255,0.05); border-radius: 12px; font-weight: bold; font-size: 12px; transition: all 0.2s; cursor: pointer; }
         .page-btn:active { background: var(--main-red); transform: scale(0.95); }
+        
+        .pc-tip { display: none; }
+        html.is-desktop .pc-tip { display: block; position: fixed; left: 10%; top: 50%; transform: translateY(-50%); color: white; z-index: 0; max-width: 300px;}
     </style>
 </head>
 <body class="pb-24">
 
-    <!-- 登錄驗證 -->
-    <div id="passwordView" class="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-slate-950">
-        <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, #e50914 1px, transparent 0); background-size: 24px 24px;"></div>
-        <div class="relative w-full max-w-sm bg-slate-900/80 backdrop-blur-xl border border-white/10 p-10 rounded-[2.5rem] shadow-2xl text-center">
-            <div class="w-20 h-20 bg-red-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-600/20">
-                <i class="fas fa-bolt text-3xl text-white"></i>
+    <!-- PC端左側廣告位 (智能變換文案) -->
+    <div class="pc-tip animate-fade-in">
+        <h1 class="text-6xl font-black mb-4 tracking-tighter" id="pcTitle">VIP<span class="text-red-600">.</span></h1>
+        <p class="text-gray-400 mb-8 text-lg font-light">極致觀影 · 暢享絲滑<br>適配 PC 智能模擬器</p>
+        <div class="bg-white/5 p-6 rounded-2xl backdrop-blur border border-white/10 w-fit">
+            <p class="text-xs text-gray-500 mb-3 tracking-widest">SCAN TO MOBILE</p>
+            <div class="w-32 h-32 bg-white rounded-xl flex items-center justify-center shadow-2xl">
+                <i class="fas fa-qrcode text-5xl text-black"></i>
             </div>
-            <h1 class="text-2xl font-black mb-2 text-white">奶香香影視</h1>
-            <p class="text-gray-500 text-[10px] tracking-widest uppercase mb-8">Ultimate Performance</p>
-            <input id="pwInput" type="password" placeholder="請輸入訪問密碼" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-center text-xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-red-600 transition-all text-white mb-4">
-            <button onclick="checkAccess()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-xl transition-all">加速進入</button>
         </div>
     </div>
 
-    <div id="mainApp" class="hidden opacity-0 transition-opacity duration-700">
-        <header class="fixed top-0 w-full z-[1000] glass mobile-header px-6 flex items-center justify-between">
-            <div class="flex items-center gap-2" onclick="goHome()">
-                <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg"><i class="fas fa-play text-white text-[10px]"></i></div>
-                <span class="text-lg font-black tracking-tighter text-white uppercase">Naixx</span>
-            </div>
-            <button onclick="toggleSearch()" class="w-10 h-10 flex items-center justify-center text-gray-400"><i class="fas fa-search"></i></button>
-        </header>
+    <!-- 核心容器 -->
+    <div id="app-wrapper">
 
-        <main id="viewContainer" class="pt-0">
-            <div id="homeView">
-                <section class="mb-6">
-                    <div class="swiper mainSwiper">
-                        <div class="swiper-wrapper" id="heroWrapper"></div>
-                        <div class="swiper-pagination"></div>
-                    </div>
-                </section>
-
-                <section class="sticky top-[60px] z-[900] glass border-b border-white/5 py-3">
-                    <div class="flex flex-col gap-3">
-                        <div id="sourceFilters" class="flex gap-2 overflow-x-auto hide-scroll px-4"></div>
-                        <div id="cateFilters" class="flex gap-2 overflow-x-auto hide-scroll px-4"></div>
-                    </div>
-                </section>
-
-                <section class="px-4 py-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <div class="flex items-center gap-2">
-                            <span class="w-1 h-4 bg-red-600 rounded-full"></span>
-                            <h2 id="listTitle" class="text-lg font-black text-white">熱播精選</h2>
-                        </div>
-                    </div>
-                    <div id="movieGrid" class="grid grid-cols-2 gap-4"></div>
-
-                    <!-- 底部分頁器 -->
-                    <div class="mt-12 mb-8 flex flex-col items-center gap-6 p-4 bg-white/5 rounded-[2rem] border border-white/5">
-                        <div class="flex items-center gap-4">
-                            <button onclick="fetchData(state.page - 1)" class="page-btn text-gray-400"><i class="fas fa-arrow-left mr-2"></i>上一頁</button>
-                            <span class="text-xs font-black text-white uppercase tracking-tighter">第 <span class="text-red-600 mx-1 text-base" id="currentPageDisplay">1</span> 頁</span>
-                            <button onclick="fetchData(state.page + 1)" class="page-btn text-white">下一頁<i class="fas fa-arrow-right ml-2"></i></button>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="text-[10px] text-gray-500 font-bold">跳轉至</span>
-                            <input type="number" id="jumpInput" class="page-input" placeholder="10">
-                            <button onclick="jumpToPage()" class="bg-red-600 px-4 py-2 rounded-lg text-[10px] font-black">確定</button>
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-            <div id="rankView" class="hidden px-4 pt-20 pb-10">
-                <h3 class="text-2xl font-black text-white mb-6"><i class="fas fa-fire-alt text-red-600 mr-2"></i>熱度榜單</h3>
-                <div id="rankList" class="flex flex-col gap-4"></div>
-            </div>
-
-            <div id="playView" class="hidden">
-                <div class="relative w-full aspect-video bg-black sticky top-0 z-[1100]">
-                    <iframe id="mainPlayer" class="w-full h-full border-none" allowfullscreen></iframe>
-                    <div id="playerLoading" class="absolute inset-0 flex items-center justify-center bg-slate-950 hidden">
-                        <div class="loader"></div>
-                    </div>
+        <!-- 登錄驗證：入口 -->
+        <div id="passwordView" class="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-slate-950 fixed-w-limit">
+            <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, #e50914 1px, transparent 0); background-size: 24px 24px;"></div>
+            <div class="relative w-full max-w-sm bg-slate-900/80 backdrop-blur-xl border border-white/10 p-10 rounded-[2.5rem] shadow-2xl text-center">
+                <div class="w-20 h-20 bg-red-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-600/20">
+                    <i class="fas fa-bolt text-3xl text-white"></i>
                 </div>
-                <div class="p-6">
-                    <button onclick="goHome()" class="text-[10px] font-bold text-gray-500 uppercase mb-4 flex items-center gap-1"><i class="fas fa-chevron-left"></i>返回首頁</button>
-                    <h1 id="pTitle" class="text-2xl font-black text-white mb-2">載入中...</h1>
-                    <div id="epList" class="grid grid-cols-3 gap-2 mb-8 mt-4"></div>
-                    <div class="bg-white/5 p-4 rounded-2xl mb-10">
-                        <p id="pContent" class="text-xs text-gray-400 leading-relaxed"></p>
-                    </div>
+                <h1 class="text-2xl font-black mb-2 text-white">私人影院</h1>
+                <p class="text-gray-500 text-[10px] tracking-widest uppercase mb-8">Access Verification</p>
+                <input id="pwInput" type="password" placeholder="請輸入訪問密碼" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-center text-xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-red-600 transition-all text-white mb-4">
+                <button onclick="checkAccess()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-xl transition-all cursor-pointer">加速進入</button>
+            </div>
+        </div>
 
-                    <!-- 隨機推薦板塊 -->
-                    <div class="mt-10">
+        <div id="mainApp" class="hidden opacity-0 transition-opacity duration-700">
+            <!-- Header -->
+            <header class="fixed top-0 w-full z-[1000] glass mobile-header px-6 flex items-center justify-between fixed-w-limit">
+                <div class="flex items-center gap-2 cursor-pointer" onclick="goHome()">
+                    <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg">
+                        <i id="logoIcon" class="fas fa-play text-white text-[10px]"></i>
+                    </div>
+                    <!-- Logo文字動態變化 -->
+                    <span id="appTitle" class="text-lg font-black tracking-tighter text-white uppercase">CINEMA</span>
+                </div>
+                <button onclick="toggleSearch()" class="w-10 h-10 flex items-center justify-center text-gray-400 cursor-pointer hover:text-white"><i class="fas fa-search"></i></button>
+            </header>
+
+            <main id="viewContainer" class="pt-16">
+                <div id="homeView">
+                    <section class="mb-6">
+                        <div class="swiper mainSwiper">
+                            <div class="swiper-wrapper" id="heroWrapper"></div>
+                            <div class="swiper-pagination"></div>
+                        </div>
+                    </section>
+
+                    <!-- Filter 篩選區 -->
+                    <section class="relative z-[900] glass border-b border-white/5 py-3 fixed-w-limit">
+                        <div class="flex flex-col gap-3">
+                            <div id="sourceFilters" class="flex gap-2 overflow-x-auto hide-scroll px-4"></div>
+                            <div id="cateFilters" class="flex gap-2 overflow-x-auto hide-scroll px-4"></div>
+                        </div>
+                    </section>
+
+                    <section class="px-4 py-6">
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center gap-2">
-                                <span class="w-1 h-4 bg-amber-500 rounded-full"></span>
-                                <h3 class="text-lg font-black text-white">隨機推薦作品</h3>
+                                <span class="w-1 h-4 bg-red-600 rounded-full"></span>
+                                <h2 id="listTitle" class="text-lg font-black text-white">熱播精選</h2>
                             </div>
-                            <button onclick="refreshRecommend()" class="text-xs text-amber-500 font-bold flex items-center gap-1 active:rotate-180 transition-transform duration-500">
-                                <i class="fas fa-sync-alt"></i> 換一批
-                            </button>
                         </div>
-                        <div id="recommendGrid" class="grid grid-cols-2 gap-4">
-                            <!-- 推薦作品 -->
+                        <div id="movieGrid" class="grid grid-cols-2 gap-4"></div>
+
+                        <!-- 底部分頁器 -->
+                        <div class="mt-12 mb-8 flex flex-col items-center gap-6 p-4 bg-white/5 rounded-[2rem] border border-white/5">
+                            <div class="flex items-center gap-4">
+                                <button onclick="fetchData(state.page - 1)" class="page-btn text-gray-400 hover:text-white"><i class="fas fa-arrow-left mr-2"></i>上一頁</button>
+                                <span class="text-xs font-black text-white uppercase tracking-tighter">第 <span class="text-red-600 mx-1 text-base" id="currentPageDisplay">1</span> 頁</span>
+                                <button onclick="fetchData(state.page + 1)" class="page-btn text-white">下一頁<i class="fas fa-arrow-right ml-2"></i></button>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-[10px] text-gray-500 font-bold">跳轉至</span>
+                                <input type="number" id="jumpInput" class="page-input" placeholder="10">
+                                <button onclick="jumpToPage()" class="bg-red-600 px-4 py-2 rounded-lg text-[10px] font-black cursor-pointer hover:bg-red-700">確定</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="rankView" class="hidden px-4 pt-4 pb-10">
+                    <h3 class="text-2xl font-black text-white mb-6"><i class="fas fa-fire-alt text-red-600 mr-2"></i>熱度榜單</h3>
+                    <div id="rankList" class="flex flex-col gap-4"></div>
+                </div>
+
+                <div id="playView" class="hidden">
+                    <div class="relative w-full aspect-video bg-black sticky top-[60px] z-[1100]">
+                        <iframe id="mainPlayer" class="w-full h-full border-none" allowfullscreen></iframe>
+                        <div id="playerLoading" class="absolute inset-0 flex items-center justify-center bg-slate-950 hidden">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <button onclick="goHome()" class="text-[10px] font-bold text-gray-500 uppercase mb-4 flex items-center gap-1 cursor-pointer hover:text-white"><i class="fas fa-chevron-left"></i>返回首頁</button>
+                        <h1 id="pTitle" class="text-2xl font-black text-white mb-2">載入中...</h1>
+                        <div id="epList" class="grid grid-cols-3 gap-2 mb-8 mt-4"></div>
+                        <div class="bg-white/5 p-4 rounded-2xl mb-10">
+                            <p id="pContent" class="text-xs text-gray-400 leading-relaxed"></p>
+                        </div>
+
+                        <!-- 隨機推薦板塊 -->
+                        <div class="mt-10">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-1 h-4 bg-amber-500 rounded-full"></span>
+                                    <h3 class="text-lg font-black text-white">隨機推薦作品</h3>
+                                </div>
+                                <button onclick="refreshRecommend()" class="text-xs text-amber-500 font-bold flex items-center gap-1 active:rotate-180 transition-transform duration-500 cursor-pointer">
+                                    <i class="fas fa-sync-alt"></i> 換一批
+                                </button>
+                            </div>
+                            <div id="recommendGrid" class="grid grid-cols-2 gap-4">
+                                <!-- 推薦作品 -->
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </main>
+            </main>
 
-        <nav class="bottom-nav glass">
-            <a href="javascript:void(0)" onclick="switchTab('home')" class="nav-item active" id="tab-home"><i class="fas fa-home"></i><span>精選</span></a>
-            <a href="javascript:void(0)" onclick="switchTab('rank')" class="nav-item" id="tab-rank"><i class="fas fa-chart-line"></i><span>榜單</span></a>
-            <a href="javascript:void(0)" onclick="toggleSearch()" class="nav-item"><i class="fas fa-search"></i><span>搜索</span></a>
-            <a href="javascript:void(0)" onclick="showToast('加速節點已全量部署')" class="nav-item"><i class="fas fa-bolt text-amber-500"></i><span>極速</span></a>
-        </nav>
+            <!-- Bottom Nav -->
+            <nav class="bottom-nav glass fixed-w-limit">
+                <a href="javascript:void(0)" onclick="switchTab('home')" class="nav-item active" id="tab-home"><i class="fas fa-home"></i><span>精選</span></a>
+                <a href="javascript:void(0)" onclick="switchTab('rank')" class="nav-item" id="tab-rank"><i class="fas fa-chart-line"></i><span>榜單</span></a>
+                <a href="javascript:void(0)" onclick="toggleSearch()" class="nav-item"><i class="fas fa-search"></i><span>搜索</span></a>
+                <a href="javascript:void(0)" onclick="showToast('節點正常')" class="nav-item"><i class="fas fa-bolt text-amber-500"></i><span>極速</span></a>
+            </nav>
 
-        <div id="searchOverlay" class="fixed inset-0 z-[2000] glass flex-col p-6 hidden">
-            <div class="flex items-center gap-4 mb-8">
-                <input id="mobileSearchInput" type="text" placeholder="全網極速搜索..." class="flex-1 bg-white/10 border border-white/10 rounded-full py-3 px-6 focus:outline-none text-white text-sm">
-                <button onclick="toggleSearch()" class="text-gray-400 font-bold text-sm">取消</button>
+            <div id="searchOverlay" class="fixed inset-0 z-[2000] glass flex-col p-6 hidden fixed-w-limit">
+                <div class="flex items-center gap-4 mb-8">
+                    <input id="mobileSearchInput" type="text" placeholder="全網極速搜索..." class="flex-1 bg-white/10 border border-white/10 rounded-full py-3 px-6 focus:outline-none text-white text-sm">
+                    <button onclick="toggleSearch()" class="text-gray-400 font-bold text-sm cursor-pointer hover:text-white">取消</button>
+                </div>
             </div>
         </div>
     </div>
+    <!-- End of app-wrapper -->
 
-    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 glass px-6 py-3 rounded-full text-[10px] font-black text-white opacity-0 transition-all z-[3000] pointer-events-none"></div>
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 glass px-6 py-3 rounded-full text-[10px] font-black text-white opacity-0 transition-all z-[3000] pointer-events-none fixed-w-limit"></div>
 
     <script>
-        const CONFIG = {
-            pw: '391996',
-            sources: [
-                { name: '奶香專源', url: 'https://naixxzy.com/api.php/provide/vod/' },
-                { name: '快車資源', url: 'https://caiji.kczyapi.com/api.php/provide/vod/' },
-                { name: '索尼資源', url: 'https://suoniapi.com/api.php/provide/vod/' },
-                { name: '量子資源', url: 'https://cj.lziapi.com/api.php/provide/vod/' }
-            ],
-            jx: 'https://mtjiexi.cc:966/?url=',
-            // 節點列表
+        // 核心配置：雙重源定義
+        // 0: 奶香專源 (敏感)
+        // 1: 虎牙資源 (安全)
+        const RAW_SOURCES = [
+            { 
+                name: '奶香專源', 
+                url: 'https://naixxzy.com/api.php/provide/vod/',
+                parser: 'https://mtjiexi.cc:966/?url='
+            },
+            { 
+                name: '極速藍光', // 虎牙在列表裡改個好聽的名字
+                url: 'https://www.huyaapi.com/api.php/provide/vod/from/hym3u8/at/json', 
+                parser: 'https://huyajx.com/play/?url='
+            }
+        ];
+
+        let CONFIG = {
+            sources: [], // 動態加載
             proxies: [
                 (url) => url, 
                 (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&t=${Date.now()}`,
@@ -210,34 +302,68 @@
         let state = {
             page: 1, typeId: '', keyword: '', activeSourceIdx: 0,
             movies: [], classes: [], swiper: null, currentTab: 'home',
-            allPool: [] 
+            allPool: [], mode: 'none'
         };
 
+        // --- 陰陽密碼邏輯 ---
         function checkAccess() {
-            if (document.getElementById('pwInput').value === CONFIG.pw) {
-                sessionStorage.setItem('naixx_auth_v4', 'true');
-                unlockSite();
+            const input = document.getElementById('pwInput').value;
+            
+            if (input === '199688') {
+                // 綠色模式：只加載虎牙
+                localStorage.setItem('naixx_auth_mode', 'safe');
+                unlockSite('safe');
+            } else if (input === '1996') {
+                // 全開模式：加載所有
+                localStorage.setItem('naixx_auth_mode', 'full');
+                unlockSite('full');
             } else {
-                showToast('密碼錯誤，請檢查');
+                showToast('密碼錯誤');
             }
         }
 
-        function unlockSite() {
+        function unlockSite(modeStr) {
             document.getElementById('passwordView').style.display = 'none';
             const app = document.getElementById('mainApp');
             app.classList.remove('hidden');
             setTimeout(() => app.classList.add('opacity-100'), 50);
+            
+            // 初始化數據
+            initMode(modeStr);
+        }
+
+        function initMode(modeStr) {
+            state.mode = modeStr;
+            if (modeStr === 'safe') {
+                // 安全模式配置
+                CONFIG.sources = [RAW_SOURCES[1]]; // 只取虎牙
+                document.title = '極速藍光影視 - Free Cinema';
+                document.getElementById('appTitle').innerText = 'BlueRay'; // 改Logo文字
+                document.getElementById('pcTitle').innerText = 'HD';
+                state.activeSourceIdx = 0; // 重置為0，因為數組只有1個元素了
+            } else {
+                // 全開模式配置
+                CONFIG.sources = RAW_SOURCES; // 全取
+                document.title = '奶香香影視 - Premium Cinema';
+                document.getElementById('appTitle').innerText = 'Naixx';
+                document.getElementById('pcTitle').innerText = 'NAIXX.';
+                state.activeSourceIdx = 0; // 默認奶香
+            }
+            
+            // 開始加載
             initApp();
         }
 
         async function initApp() {
-            const cachedClasses = localStorage.getItem(`classes_${state.activeSourceIdx}`);
+            // 清理舊緩存，防止串台
+            const cacheKey = `classes_${state.mode}_${state.activeSourceIdx}`;
+            const cachedClasses = localStorage.getItem(cacheKey);
+            
             if (cachedClasses) {
                 state.classes = JSON.parse(cachedClasses);
                 renderFilters();
             }
 
-            // 並行啟動
             loadClasses();
             fetchData();
         }
@@ -247,7 +373,8 @@
             const data = await fastRaceFetch(url);
             if (data && data.class) {
                 state.classes = data.class;
-                localStorage.setItem(`classes_${state.activeSourceIdx}`, JSON.stringify(data.class));
+                const cacheKey = `classes_${state.mode}_${state.activeSourceIdx}`;
+                localStorage.setItem(cacheKey, JSON.stringify(data.class));
                 renderFilters();
             }
         }
@@ -255,7 +382,8 @@
         async function fetchData(page = 1) {
             if (page < 1) return;
             renderSkeleton();
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            const scrollContainer = document.documentElement.classList.contains('is-desktop') ? document.getElementById('app-wrapper') : window;
+            scrollContainer.scrollTo({top: 0, behavior: 'smooth'});
             
             const source = CONFIG.sources[state.activeSourceIdx].url;
             const target = `${source}?ac=detail&pg=${page}${state.typeId ? '&t='+state.typeId : ''}${state.keyword ? '&wd='+encodeURIComponent(state.keyword) : ''}`;
@@ -264,46 +392,30 @@
             if (data && data.list) {
                 state.movies = data.list.map(m => ({ ...m, heat: (Math.random()*20 + 79.5).toFixed(1) }));
                 state.page = parseInt(data.page);
-                // 合併數據到推薦池
                 state.allPool = [...new Set([...state.allPool, ...state.movies])];
                 renderUI();
                 renderRecommend();
             } else {
-                showToast('加載失敗，請切換線路重試');
+                showToast('加載失敗，請切換線路');
             }
         }
 
-        // --- 核心優化：極速競速請求 ---
         async function fastRaceFetch(url) {
-            // 同時發起所有請求
             const fetchTasks = CONFIG.proxies.map(async (proxyFn) => {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 6000); // 增加寬限時間
-
+                const timeoutId = setTimeout(() => controller.abort(), 6000);
                 try {
                     const resp = await fetch(proxyFn(url), { signal: controller.signal });
                     clearTimeout(timeoutId);
-                    
                     if (!resp.ok) throw new Error('Network error');
-                    
                     let result = await resp.json();
                     if (result.contents) result = JSON.parse(result.contents);
                     const final = Array.isArray(result) ? result[0] : result;
-                    
                     if (final) return final;
                     throw new Error('Empty data');
-                } catch (e) {
-                    throw e;
-                }
+                } catch (e) { throw e; }
             });
-
-            // 誰快用誰
-            try {
-                return await Promise.any(fetchTasks);
-            } catch (e) {
-                console.error("All fetch attempts failed", e);
-                return null;
-            }
+            try { return await Promise.any(fetchTasks); } catch (e) { return null; }
         }
 
         function renderUI() {
@@ -332,7 +444,7 @@
         function renderGrid() {
             const grid = document.getElementById('movieGrid');
             grid.innerHTML = state.movies.map((m, i) => `
-                <div class="movie-card animate-fade-in" onclick="openPlayer(${i})">
+                <div class="movie-card animate-fade-in cursor-pointer hover:opacity-80 transition-opacity" onclick="openPlayer(${i})">
                     <div class="relative mb-2">
                         <img src="${m.vod_pic}" loading="lazy" onerror="this.src='https://via.placeholder.com/200x300?text=NAIXX'">
                         <div class="absolute bottom-2 left-2 bg-red-600/90 backdrop-blur text-[8px] font-black px-1.5 py-0.5 rounded text-white italic">
@@ -348,18 +460,14 @@
         window.renderRecommend = function() {
             const container = document.getElementById('recommendGrid');
             if (!container) return;
-            
             const pool = state.allPool.length > 10 ? state.allPool : state.movies;
             const shuffled = [...pool].sort(() => 0.5 - Math.random());
             const selected = shuffled.slice(0, 10);
-            
             container.innerHTML = selected.map(m => `
-                <div class="movie-card animate-fade-in" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
+                <div class="movie-card animate-fade-in cursor-pointer hover:opacity-80 transition-opacity" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
                     <div class="relative mb-2">
                         <img src="${m.vod_pic}" class="w-full rounded-xl aspect-[2/3] object-cover" loading="lazy" onerror="this.src='https://via.placeholder.com/200x300?text=NAIXX'">
-                        <div class="absolute top-2 right-2 bg-black/60 backdrop-blur text-[7px] font-black px-1.5 py-0.5 rounded text-amber-500 border border-amber-500/30">
-                            推薦
-                        </div>
+                        <div class="absolute top-2 right-2 bg-black/60 backdrop-blur text-[7px] font-black px-1.5 py-0.5 rounded text-amber-500 border border-amber-500/30">推薦</div>
                     </div>
                     <h3 class="text-[11px] font-bold text-gray-300 truncate">${m.vod_name}</h3>
                 </div>
@@ -375,7 +483,7 @@
             const wrapper = document.getElementById('heroWrapper');
             const hots = state.movies.slice(0, 5);
             wrapper.innerHTML = hots.map(m => `
-                <div class="swiper-slide relative" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
+                <div class="swiper-slide relative cursor-pointer" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
                     <img src="${m.vod_pic}" class="w-full h-full object-cover">
                     <div class="slide-overlay">
                         <h2 class="text-2xl font-black text-white leading-tight mb-2 line-clamp-2">${m.vod_name}</h2>
@@ -386,19 +494,14 @@
                 </div>
             `).join('');
             if (state.swiper) state.swiper.destroy();
-            state.swiper = new Swiper(".mainSwiper", { 
-                pagination: { el: ".swiper-pagination" }, 
-                autoplay: { delay: 5000 }, 
-                loop: true,
-                speed: 1000
-            });
+            state.swiper = new Swiper(".mainSwiper", { pagination: { el: ".swiper-pagination" }, autoplay: { delay: 5000 }, loop: true, speed: 1000 });
         }
 
         function renderRank() {
             const list = document.getElementById('rankList');
             const sorted = [...state.movies].sort((a,b) => b.heat - a.heat).slice(0, 10);
             list.innerHTML = sorted.map((m, i) => `
-                <div class="flex items-center gap-4 bg-white/5 p-3 rounded-2xl" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
+                <div class="flex items-center gap-4 bg-white/5 p-3 rounded-2xl cursor-pointer hover:bg-white/10 transition-colors" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
                     <span class="text-xl font-black italic ${i<3 ? 'text-red-600' : 'text-gray-800'} w-6">${i+1}</span>
                     <img src="${m.vod_pic}" class="w-12 h-16 rounded-lg object-cover">
                     <div class="flex-1 overflow-hidden">
@@ -409,12 +512,9 @@
             `).join('');
         }
 
-        // --- 優化：切換 Tab 或返回主頁時停止播放 ---
         function stopPlayer() {
             const iframe = document.getElementById('mainPlayer');
-            if (iframe) {
-                iframe.src = ''; // 清空 src 會立即停止音訊和視頻加載
-            }
+            if (iframe) iframe.src = ''; 
         }
 
         window.switchTab = function(tab) {
@@ -425,7 +525,8 @@
             document.getElementById('playView').style.display = 'none';
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tab}`).classList.add('active');
-            window.scrollTo(0,0);
+            const scrollContainer = document.documentElement.classList.contains('is-desktop') ? document.getElementById('app-wrapper') : window;
+            scrollContainer.scrollTo(0,0);
         };
 
         window.openPlayer = (idx) => openPlayerWithData(state.movies[idx]);
@@ -435,48 +536,38 @@
             document.getElementById('homeView').style.display = 'none';
             document.getElementById('rankView').style.display = 'none';
             document.getElementById('playView').style.display = 'block';
-            window.scrollTo({top: 0, behavior: 'smooth'});
-            
+            const scrollContainer = document.documentElement.classList.contains('is-desktop') ? document.getElementById('app-wrapper') : window;
+            scrollContainer.scrollTo({top: 0, behavior: 'smooth'});
             document.getElementById('pTitle').innerText = m.vod_name;
             document.getElementById('pContent').innerText = (m.vod_content || '暫無介紹').replace(/<[^>]+>/g, '');
-            
             const urlData = m.vod_play_url.split('$$$')[0];
             const eps = urlData.split('#').map(l => {
                 const parts = l.split('$');
                 return { n: parts[0], u: parts[1] };
             }).filter(e => e.u);
-
             const list = document.getElementById('epList');
-            list.innerHTML = eps.map(e => `<button onclick="playUrl('${e.u}', this)" class="bg-white/5 border border-white/10 py-2 rounded-lg text-[10px] text-gray-400 truncate px-1 font-bold">${e.n}</button>`).join('');
+            list.innerHTML = eps.map(e => `<button onclick="playUrl('${e.u}', this)" class="bg-white/5 border border-white/10 py-2 rounded-lg text-[10px] text-gray-400 truncate px-1 font-bold hover:bg-white/20 transition-colors">${e.n}</button>`).join('');
             if (eps.length > 0) playUrl(eps[0].u, list.firstElementChild);
-            
             renderRecommend(); 
         };
 
         window.playUrl = (u, btn) => {
-            document.querySelectorAll('#epList button').forEach(b => b.className = 'bg-white/5 border border-white/10 py-2 rounded-lg text-[10px] text-gray-400 truncate px-1 font-bold');
-            if (btn) btn.className = 'bg-red-600 border-red-600 py-2 rounded-lg text-[10px] text-white truncate px-1 font-bold';
-            
+            document.querySelectorAll('#epList button').forEach(b => b.className = 'bg-white/5 border border-white/10 py-2 rounded-lg text-[10px] text-gray-400 truncate px-1 font-bold hover:bg-white/20 transition-colors');
+            if (btn) btn.className = 'bg-red-600 border-red-600 py-2 rounded-lg text-[10px] text-white truncate px-1 font-bold shadow-lg shadow-red-600/30';
             const loader = document.getElementById('playerLoading');
             const iframe = document.getElementById('mainPlayer');
             loader.classList.remove('hidden');
-            iframe.src = CONFIG.jx + encodeURIComponent(u.trim());
+            const currentSource = CONFIG.sources[state.activeSourceIdx];
+            iframe.src = currentSource.parser + encodeURIComponent(u.trim());
             iframe.onload = () => loader.classList.add('hidden');
         };
 
         window.jumpToPage = function() {
             const val = document.getElementById('jumpInput').value;
-            if (val && val > 0) {
-                fetchData(parseInt(val));
-            } else {
-                showToast('請輸入有效頁碼');
-            }
+            if (val && val > 0) { fetchData(parseInt(val)); } else { showToast('請輸入有效頁碼'); }
         };
 
-        window.goHome = () => {
-            stopPlayer();
-            switchTab('home');
-        };
+        window.goHome = () => { stopPlayer(); switchTab('home'); };
 
         window.toggleSearch = () => {
             const el = document.getElementById('searchOverlay');
@@ -496,30 +587,18 @@
             stopPlayer();
             state.typeId = id; state.page = 1;
             fetchData(1);
-            window.scrollTo(0,0);
+            const scrollContainer = document.documentElement.classList.contains('is-desktop') ? document.getElementById('app-wrapper') : window;
+            scrollContainer.scrollTo(0,0);
         };
 
-        function renderSkeleton() {
-            document.getElementById('movieGrid').innerHTML = Array(6).fill('<div class="skeleton aspect-[2/3] rounded-2xl"></div>').join('');
-        }
-
-        function showToast(m) {
-            const t = document.getElementById('toast');
-            t.innerText = m; t.style.opacity = '1'; t.style.bottom = '100px';
-            setTimeout(() => { t.style.opacity = '0'; t.style.bottom = '80px'; }, 2000);
-        }
-
-        document.getElementById('mobileSearchInput').onkeypress = (e) => {
-            if (e.key === 'Enter') {
-                state.keyword = e.target.value;
-                state.page = 1;
-                toggleSearch();
-                fetchData(1);
-            }
-        };
+        function renderSkeleton() { document.getElementById('movieGrid').innerHTML = Array(6).fill('<div class="skeleton aspect-[2/3] rounded-2xl"></div>').join(''); }
+        function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1'; t.style.bottom = '100px'; setTimeout(() => { t.style.opacity = '0'; t.style.bottom = '80px'; }, 2000); }
+        document.getElementById('mobileSearchInput').onkeypress = (e) => { if (e.key === 'Enter') { state.keyword = e.target.value; state.page = 1; toggleSearch(); fetchData(1); } };
 
         window.onload = () => {
-            if (sessionStorage.getItem('naixx_auth_v4') === 'true') unlockSite();
+            // 自動登錄檢查
+            const mode = localStorage.getItem('naixx_auth_mode');
+            if (mode) unlockSite(mode);
         };
     </script>
 </body>
