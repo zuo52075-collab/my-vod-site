@@ -11,8 +11,12 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.js"></script>
     
+    <!-- ★★★ 核心資產：Firebase 兼容版 SDK ★★★ -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
     <script>
-        // --- 設備檢測邏輯 ---
         function detectDevice() {
             const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             const isWideScreen = window.innerWidth > 768;
@@ -40,7 +44,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- PC端適配樣式 --- */
         html.is-desktop body {
             background-image: url('https://images.unsplash.com/photo-1616530940355-351fabd9524b?q=80&w=2835&auto=format&fit=crop');
             background-size: cover;
@@ -126,13 +129,31 @@
         
         .pc-tip { display: none; }
         html.is-desktop .pc-tip { display: block; position: fixed; left: 10%; top: 50%; transform: translateY(-50%); color: white; z-index: 0; max-width: 300px;}
+
+        /* 評論區動畫 */
+        .comment-scroll {
+            mask-image: linear-gradient(transparent, black 10%, black 90%, transparent);
+            -webkit-mask-image: linear-gradient(transparent, black 10%, black 90%, transparent);
+        }
+        .vip-diamond {
+            background: linear-gradient(135deg, #e0f2fe 0%, #38bdf8 50%, #0284c7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+        }
+        .svip-gold {
+            background: linear-gradient(135deg, #fef08a 0%, #eab308 50%, #a16207 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+        }
     </style>
 </head>
 <body class="pb-24">
 
     <div class="pc-tip animate-fade-in">
         <h1 class="text-6xl font-black mb-4 tracking-tighter" id="pcTitle">VIP<span class="text-red-600">.</span></h1>
-        <p class="text-gray-400 mb-8 text-lg font-light">極致觀影 · 暢享絲滑<br>適配 PC 智能模擬器</p>
+        <p class="text-gray-400 mb-8 text-lg font-light">极致观影 · 畅享丝滑<br>适配 PC 智能模拟器</p>
         <div class="bg-white/5 p-6 rounded-2xl backdrop-blur border border-white/10 w-fit">
             <p class="text-xs text-gray-500 mb-3 tracking-widest">SCAN TO MOBILE</p>
             <div class="w-32 h-32 bg-white rounded-xl flex items-center justify-center shadow-2xl">
@@ -143,6 +164,7 @@
 
     <div id="app-wrapper">
 
+        <!-- 登录注册页 (极简隐蔽版) -->
         <div id="passwordView" class="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-slate-950 fixed-w-limit">
             <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, #e50914 1px, transparent 0); background-size: 24px 24px;"></div>
             <div class="relative w-full max-w-sm bg-slate-900/80 backdrop-blur-xl border border-white/10 p-10 rounded-[2.5rem] shadow-2xl text-center">
@@ -150,9 +172,16 @@
                     <i class="fas fa-bolt text-3xl text-white"></i>
                 </div>
                 <h1 class="text-2xl font-black mb-2 text-white">私人影院</h1>
-                <p class="text-gray-500 text-[10px] tracking-widest uppercase mb-8">Access Verification</p>
-                <input id="pwInput" type="password" placeholder="請輸入訪問密碼" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-center text-xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-red-600 transition-all text-white mb-4">
-                <button onclick="checkAccess()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-xl transition-all cursor-pointer">加速進入</button>
+                <p class="text-gray-500 text-[10px] tracking-widest uppercase mb-8">Member Access</p>
+                
+                <input id="accountInput" type="text" placeholder="请输入账号" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-center text-xl focus:outline-none focus:ring-2 focus:ring-red-600 transition-all text-white mb-3 font-mono">
+                <input id="passwordInput" type="password" placeholder="请输入密码" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-center text-xl focus:outline-none focus:ring-2 focus:ring-red-600 transition-all text-white mb-6">
+                
+                <button onclick="handleLogin()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-xl transition-all cursor-pointer flex items-center justify-center">
+                    <span id="loginBtnText">极速登录 / 注册</span>
+                    <div id="loginLoading" class="loader ml-2 hidden" style="width:16px;height:16px;border-width:2px;"></div>
+                </button>
+                <p class="text-gray-500 text-[10px] mt-4">首次登录将自动创建账号</p>
             </div>
         </div>
 
@@ -179,9 +208,8 @@
                     <section class="relative z-[900] glass border-b border-white/5 py-3 fixed-w-limit">
                         <div class="flex flex-col gap-3">
                             <div id="sourceFilters" class="flex gap-2 overflow-x-auto hide-scroll px-4"></div>
-                            <!-- 分類欄：保證是自動加載的 -->
                             <div id="cateFilters" class="flex gap-2 overflow-x-auto hide-scroll px-4 min-h-[40px] items-center">
-                                <span class="text-[10px] text-gray-500 animate-pulse">正在同步分類庫...</span>
+                                <span class="text-[10px] text-gray-500 animate-pulse">正在同步分类库...</span>
                             </div>
                         </div>
                     </section>
@@ -190,7 +218,7 @@
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center gap-2">
                                 <span class="w-1 h-4 bg-red-600 rounded-full"></span>
-                                <h2 id="listTitle" class="text-lg font-black text-white">熱播精選</h2>
+                                <h2 id="listTitle" class="text-lg font-black text-white">热播精选</h2>
                             </div>
                         </div>
                         <div id="movieGrid" class="grid grid-cols-2 gap-4"></div>
@@ -202,17 +230,48 @@
                                 <button onclick="fetchData(state.page + 1)" class="page-btn text-white">下一頁<i class="fas fa-arrow-right ml-2"></i></button>
                             </div>
                             <div class="flex items-center gap-3">
-                                <span class="text-[10px] text-gray-500 font-bold">跳轉至</span>
+                                <span class="text-[10px] text-gray-500 font-bold">跳转至</span>
                                 <input type="number" id="jumpInput" class="page-input" placeholder="10">
-                                <button onclick="jumpToPage()" class="bg-red-600 px-4 py-2 rounded-lg text-[10px] font-black cursor-pointer hover:bg-red-700">確定</button>
+                                <button onclick="jumpToPage()" class="bg-red-600 px-4 py-2 rounded-lg text-[10px] font-black cursor-pointer hover:bg-red-700">确定</button>
                             </div>
                         </div>
                     </section>
                 </div>
 
                 <div id="rankView" class="hidden px-4 pt-4 pb-10">
-                    <h3 class="text-2xl font-black text-white mb-6"><i class="fas fa-fire-alt text-red-600 mr-2"></i>熱度榜單</h3>
+                    <h3 class="text-2xl font-black text-white mb-6"><i class="fas fa-fire-alt text-red-600 mr-2"></i>热度榜单</h3>
                     <div id="rankList" class="flex flex-col gap-4"></div>
+                </div>
+
+                <!-- 我的页面 -->
+                <div id="profileView" class="hidden px-4 pt-4 pb-10">
+                    <div class="flex items-center gap-4 mb-8 relative z-10">
+                        <div class="relative w-16 h-16 cursor-pointer group" onclick="updateNickname()">
+                            <div class="w-16 h-16 bg-gradient-to-tr from-red-600 to-orange-500 rounded-full flex items-center justify-center shadow-lg shadow-red-600/30 overflow-hidden">
+                                <i class="fas fa-user-astronaut text-3xl text-white"></i>
+                            </div>
+                            <div class="absolute bottom-0 right-0 bg-white text-black rounded-full w-5 h-5 flex items-center justify-center text-[10px] border border-gray-900 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-pen"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 cursor-pointer" onclick="updateNickname()">
+                                <h2 id="userNameDisplay" class="text-2xl font-black text-white hover:text-red-500 transition-colors">我的收藏</h2>
+                                <i class="fas fa-edit text-gray-500 text-xs"></i>
+                            </div>
+                            <p id="cloudStatus" class="text-xs text-gray-400 mt-1">正在连接云端数据库...</p>
+                            <p id="userIdDisplay" class="text-[10px] text-gray-600 font-mono mt-0.5">Account: --</p>
+                            <button onclick="handleLogout()" class="mt-2 text-[10px] bg-white/10 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-red-600/50 transition-colors border border-white/5 cursor-pointer z-50 relative">退出登录</button>
+                        </div>
+                    </div>
+                    
+                    <div id="favGrid" class="grid grid-cols-3 gap-3"></div>
+                    <div id="emptyFav" class="hidden text-center py-20">
+                        <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-heart-broken text-2xl text-gray-600"></i>
+                        </div>
+                        <p class="text-gray-500 text-xs">暂无收藏，快去添加吧</p>
+                    </div>
                 </div>
 
                 <div id="playView" class="hidden">
@@ -223,8 +282,31 @@
                         </div>
                     </div>
                     <div class="p-6">
-                        <button onclick="goHome()" class="text-[10px] font-bold text-gray-500 uppercase mb-4 flex items-center gap-1 cursor-pointer hover:text-white"><i class="fas fa-chevron-left"></i>返回首頁</button>
-                        <h1 id="pTitle" class="text-2xl font-black text-white mb-2">載入中...</h1>
+                        <div class="flex items-start justify-between mb-2">
+                            <h1 id="pTitle" class="text-xl font-black text-white leading-tight flex-1 mr-4">载入中...</h1>
+                            <button onclick="toggleFav()" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center active:scale-90 transition-transform">
+                                <i id="favIcon" class="far fa-heart text-white text-lg"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 mb-6">
+                            <button onclick="goHome()" class="text-[10px] font-bold text-gray-500 uppercase bg-white/5 px-2 py-1 rounded flex items-center gap-1 hover:text-white">
+                                <i class="fas fa-chevron-left"></i>返回
+                            </button>
+                            <span id="playerSourceTag" class="text-[10px] text-red-500 font-bold px-2 py-1 bg-red-500/10 rounded">极速蓝光</span>
+                        </div>
+
+                        <!-- 氛围组：虚拟评论区 -->
+                        <div class="mb-8">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="w-1 h-3 bg-purple-500 rounded-full"></span>
+                                <h3 class="text-sm font-black text-white">实时热评 <span class="text-[10px] text-gray-500 font-normal ml-1">99+</span></h3>
+                            </div>
+                            <div id="commentSection" class="h-32 overflow-hidden relative bg-white/5 rounded-xl p-3 comment-scroll">
+                                <div id="commentList" class="flex flex-col gap-2"></div>
+                            </div>
+                        </div>
+
                         <div id="epList" class="grid grid-cols-3 gap-2 mb-8 mt-4"></div>
                         <div class="bg-white/5 p-4 rounded-2xl mb-10">
                             <p id="pContent" class="text-xs text-gray-400 leading-relaxed"></p>
@@ -234,10 +316,10 @@
                             <div class="flex items-center justify-between mb-6">
                                 <div class="flex items-center gap-2">
                                     <span class="w-1 h-4 bg-amber-500 rounded-full"></span>
-                                    <h3 class="text-lg font-black text-white">隨機推薦作品</h3>
+                                    <h3 class="text-lg font-black text-white">随机推荐作品</h3>
                                 </div>
                                 <button onclick="refreshRecommend()" class="text-xs text-amber-500 font-bold flex items-center gap-1 active:rotate-180 transition-transform duration-500 cursor-pointer">
-                                    <i class="fas fa-sync-alt"></i> 換一批
+                                    <i class="fas fa-sync-alt"></i> 换一批
                                 </button>
                             </div>
                             <div id="recommendGrid" class="grid grid-cols-2 gap-4"></div>
@@ -249,8 +331,8 @@
             <nav class="bottom-nav glass fixed-w-limit">
                 <a href="javascript:void(0)" onclick="switchTab('home')" class="nav-item active" id="tab-home"><i class="fas fa-home"></i><span>精選</span></a>
                 <a href="javascript:void(0)" onclick="switchTab('rank')" class="nav-item" id="tab-rank"><i class="fas fa-chart-line"></i><span>榜單</span></a>
-                <a href="javascript:void(0)" onclick="toggleSearch()" class="nav-item"><i class="fas fa-search"></i><span>搜索</span></a>
-                <a href="javascript:void(0)" onclick="showToast('節點正常')" class="nav-item"><i class="fas fa-bolt text-amber-500"></i><span>極速</span></a>
+                <a href="javascript:void(0)" onclick="switchTab('profile')" class="nav-item" id="tab-profile"><i class="fas fa-user"></i><span>我的</span></a>
+                <a href="javascript:void(0)" onclick="showToast('节点正常')" class="nav-item"><i class="fas fa-bolt text-amber-500"></i><span>极速</span></a>
             </nav>
 
             <div id="searchOverlay" class="fixed inset-0 z-[2000] glass flex-col p-6 hidden fixed-w-limit">
@@ -264,39 +346,25 @@
     <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 glass px-6 py-3 rounded-full text-[10px] font-black text-white opacity-0 transition-all z-[3000] pointer-events-none fixed-w-limit"></div>
 
     <script>
-        // 核心配置：资源池 (顺序很重要)
         const RAW_SOURCES = [
-            { 
-                name: '無水印源', // Index 0: 這裡面分類最全 (無碼/中文字幕)
-                url: 'https://api.wsyzy.net/api.php/provide/vod/',
-                parser: 'https://wsyzy.top/m3u8/?url='
-            },
-            { 
-                name: '奶香專源', // Index 1
-                url: 'https://naixxzy.com/api.php/provide/vod/',
-                parser: 'https://mtjiexi.cc:966/?url='
-            },
-            {
-                name: '幸資源', // Index 2: 永久免費無廣告
-                url: 'https://xzybb1.com/api.php/provide/vod/',
-                parser: 'https://19xzy.com/?url='
-            },
-            { 
-                name: '極速藍光', // Index 3: 虎牙 (安全門面)
-                url: 'https://www.huyaapi.com/api.php/provide/vod/from/hym3u8/at/json', 
-                parser: 'https://huyajx.com/play/?url='
-            },
-            { 
-                name: '魔都資源', // Index 4
-                url: 'https://www.mdzyapi.com/api.php/provide/vod/', 
-                parser: 'https://jiexi.modujx01.com/?url='
-            },
-            { 
-                name: '新浪資源', // Index 5
-                url: 'https://api.xinlangapi.com/xinlangapi.php/provide/vod/from/xlm3u8/at/json', 
-                parser: 'https://www.xinlangjiexi.com/m3u8/?url='
-            }
+            { name: '無水印源', url: 'https://api.wsyzy.net/api.php/provide/vod/', parser: 'https://wsyzy.top/m3u8/?url=' },
+            { name: '奶香專源', url: 'https://naixxzy.com/api.php/provide/vod/', parser: 'https://mtjiexi.cc:966/?url=' },
+            { name: '幸資源', url: 'https://xzybb1.com/api.php/provide/vod/', parser: 'https://19xzy.com/?url=' },
+            { name: '極速藍光', url: 'https://www.huyaapi.com/api.php/provide/vod/from/hym3u8/at/json', parser: 'https://huyajx.com/play/?url=' },
+            { name: '魔都資源', url: 'https://www.mdzyapi.com/api.php/provide/vod/', parser: 'https://jiexi.modujx01.com/?url=' },
+            { name: '新浪資源', url: 'https://api.xinlangapi.com/xinlangapi.php/provide/vod/from/xlm3u8/at/json', parser: 'https://www.xinlangjiexi.com/m3u8/?url=' }
         ];
+
+        // ★★★★★ FIREBASE 配置區域 ★★★★★
+        const firebaseConfig = {
+            apiKey: "AIzaSyADOBqIzpJzN1iebUj-Sg_-3tONftiX-E0",
+            authDomain: "device-streaming-3dbbebb8.firebaseapp.com",
+            projectId: "device-streaming-3dbbebb8",
+            storageBucket: "device-streaming-3dbbebb8.firebasestorage.app",
+            messagingSenderId: "768460898395",
+            appId: "1:768460898395:web:b456c8dcbc13095df8ff7e"
+        };
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
         let CONFIG = {
             sources: [], 
@@ -311,138 +379,80 @@
         let state = {
             page: 1, typeId: '', keyword: '', activeSourceIdx: 0,
             movies: [], classes: [], swiper: null, currentTab: 'home',
-            allPool: [], mode: 'none'
+            allPool: [], mode: 'none', current: null,
+            favorites: [], 
+            user: null,    
+            db: null,
+            currentAccount: '',
+            commentInterval: null
         };
 
-        function checkAccess() {
-            const input = document.getElementById('pwInput').value;
-            if (input === '199688') {
-                localStorage.setItem('naixx_auth_mode', 'safe');
-                unlockSite('safe');
-            } else if (input === '1996') {
-                localStorage.setItem('naixx_auth_mode', 'full');
-                unlockSite('full');
+        // --- 1. 基礎工具函數 (HOISTED) ---
+        function showToast(m) { 
+            const t = document.getElementById('toast'); 
+            t.innerText = m; 
+            t.style.opacity = '1'; 
+            t.style.bottom = '100px'; 
+            setTimeout(() => { t.style.opacity = '0'; t.style.bottom = '80px'; }, 2000); 
+        }
+
+        function renderSkeleton() { 
+            document.getElementById('movieGrid').innerHTML = Array(6).fill('<div class="skeleton aspect-[2/3] rounded-2xl"></div>').join(''); 
+        }
+
+        // --- 2. 業務渲染函數 (HOISTED) ---
+        function updateFavIcon() {
+            if (!state.current) return;
+            const isFav = state.favorites.some(m => m.vod_id === state.current.vod_id);
+            const icon = document.getElementById('favIcon');
+            icon.className = isFav ? 'fas fa-heart text-red-500 text-lg' : 'far fa-heart text-white text-lg';
+        }
+
+        function renderProfile() {
+            const grid = document.getElementById('favGrid');
+            const empty = document.getElementById('emptyFav');
+            
+            if (state.favorites.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
             } else {
-                showToast('密碼錯誤');
+                empty.classList.add('hidden');
+                grid.innerHTML = state.favorites.map(m => `
+                    <div class="movie-card animate-fade-in cursor-pointer" onclick="playFav(${JSON.stringify(m).replace(/"/g, '&quot;')})">
+                        <div class="relative mb-2">
+                            <img src="${m.vod_pic}" class="w-full rounded-lg aspect-[2/3] object-cover" onerror="this.src='https://via.placeholder.com/200x300?text=NAIXX'">
+                            <div class="absolute top-1 left-1 bg-black/60 backdrop-blur text-[8px] font-bold px-1.5 py-0.5 rounded text-white border border-white/20">${m.sourceName || '未知'}</div>
+                            <div class="absolute top-1 right-1 bg-red-600 rounded-full w-5 h-5 flex items-center justify-center">
+                                <i class="fas fa-play text-[8px] text-white ml-0.5"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-[10px] font-bold text-gray-300 truncate">${m.vod_name}</h3>
+                    </div>
+                `).join('');
             }
         }
 
-        function unlockSite(modeStr) {
-            document.getElementById('passwordView').style.display = 'none';
-            const app = document.getElementById('mainApp');
-            app.classList.remove('hidden');
-            setTimeout(() => app.classList.add('opacity-100'), 50);
-            initMode(modeStr);
+        function renderRecommend() {
+            const container = document.getElementById('recommendGrid');
+            if (!container) return;
+            const pool = state.allPool.length > 10 ? state.allPool : state.movies;
+            const shuffled = [...pool].sort(() => 0.5 - Math.random());
+            const selected = shuffled.slice(0, 10);
+            container.innerHTML = selected.map(m => `
+                <div class="movie-card animate-fade-in cursor-pointer hover:opacity-80 transition-opacity" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
+                    <div class="relative mb-2">
+                        <img src="${m.vod_pic}" class="w-full rounded-xl aspect-[2/3] object-cover" loading="lazy" onerror="this.src='https://via.placeholder.com/200x300?text=NAIXX'">
+                        <div class="absolute top-2 right-2 bg-black/60 backdrop-blur text-[7px] font-black px-1.5 py-0.5 rounded text-amber-500 border border-amber-500/30">推薦</div>
+                    </div>
+                    <h3 class="text-[11px] font-bold text-gray-300 truncate">${m.vod_name}</h3>
+                </div>
+            `).join('');
         }
 
-        function initMode(modeStr) {
-            state.mode = modeStr;
-            if (modeStr === 'safe') {
-                // 安全模式：只保留虎牙 (index 3 in RAW_SOURCES)
-                CONFIG.sources = [RAW_SOURCES[3]]; 
-                document.title = '極速藍光影視 - Free Cinema';
-                document.getElementById('appTitle').innerText = 'BlueRay';
-                document.getElementById('pcTitle').innerText = 'HD';
-                state.activeSourceIdx = 0; 
-            } else {
-                // 全開模式：所有資源，無水印排第一
-                CONFIG.sources = RAW_SOURCES; 
-                document.title = '奶香香影視 - Premium Cinema';
-                document.getElementById('appTitle').innerText = 'Naixx';
-                document.getElementById('pcTitle').innerText = 'NAIXX.';
-                state.activeSourceIdx = 0; // 默認無水印源
-            }
-            initApp();
-        }
-
-        async function initApp() {
-            // 切換源時清空分類顯示，避免用戶誤會是自定義的
-            document.getElementById('cateFilters').innerHTML = '<span class="text-[10px] text-gray-500 animate-pulse">正在同步分類庫...</span>';
-            
-            // 清理舊緩存
-            const cacheKey = `classes_${state.mode}_${state.activeSourceIdx}`;
-            const cachedClasses = localStorage.getItem(cacheKey);
-            
-            // 先加載緩存的，但也後台刷新
-            if (cachedClasses) {
-                state.classes = JSON.parse(cachedClasses);
-                renderFilters();
-            }
-
-            loadClasses();
-            fetchData();
-        }
-
-        async function loadClasses() {
-            // 核心修復：確保 ac=list 參數正確，去除路徑中的 at/json 等干擾
-            // 有些接口如果不傳 ac=list，會返回視頻列表而不是分類列表
-            let baseUrl = CONFIG.sources[state.activeSourceIdx].url;
-            
-            // 如果url包含了 at/json 或 at/xml，先去掉，因為我們要請求的是根目錄的 ac=list
-            baseUrl = baseUrl.replace('at/json', '').replace('at/xml', '');
-            
-            // 確保以 ?ac=list 或 &ac=list 結尾
-            const joinChar = baseUrl.includes('?') ? '&' : '?';
-            const url = `${baseUrl}${joinChar}ac=list`;
-
-            const data = await fastRaceFetch(url);
-            if (data && data.class) {
-                state.classes = data.class;
-                const cacheKey = `classes_${state.mode}_${state.activeSourceIdx}`;
-                localStorage.setItem(cacheKey, JSON.stringify(data.class));
-                showToast(`已同步 ${data.class.length} 個分類`); // 提示用戶是實時獲取的
-                renderFilters();
-            } else {
-                console.log("No class data found", data);
-            }
-        }
-
-        async function fetchData(page = 1) {
-            if (page < 1) return;
-            renderSkeleton();
-            const scrollContainer = document.documentElement.classList.contains('is-desktop') ? document.getElementById('app-wrapper') : window;
-            scrollContainer.scrollTo({top: 0, behavior: 'smooth'});
-            
-            const source = CONFIG.sources[state.activeSourceIdx].url;
-            const target = `${source}?ac=detail&pg=${page}${state.typeId ? '&t='+state.typeId : ''}${state.keyword ? '&wd='+encodeURIComponent(state.keyword) : ''}`;
-            
-            const data = await fastRaceFetch(target);
-            if (data && data.list) {
-                state.movies = data.list.map(m => ({ ...m, heat: (Math.random()*20 + 79.5).toFixed(1) }));
-                state.page = parseInt(data.page);
-                state.allPool = [...new Set([...state.allPool, ...state.movies])];
-                renderUI();
-                renderRecommend();
-            } else {
-                showToast('加載失敗，請切換線路');
-            }
-        }
-
-        async function fastRaceFetch(url) {
-            const fetchTasks = CONFIG.proxies.map(async (proxyFn) => {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3500); 
-                try {
-                    const resp = await fetch(proxyFn(url), { signal: controller.signal });
-                    clearTimeout(timeoutId);
-                    if (!resp.ok) throw new Error('Network error');
-                    let result = await resp.json();
-                    if (result.contents) result = JSON.parse(result.contents);
-                    const final = Array.isArray(result) ? result[0] : result;
-                    if (final) return final;
-                    throw new Error('Empty data');
-                } catch (e) { throw e; }
-            });
-            try { return await Promise.any(fetchTasks); } catch (e) { return null; }
-        }
-
-        function renderUI() {
-            renderGrid();
-            renderHero();
-            renderRank();
-            renderFilters();
-            document.getElementById('currentPageDisplay').innerText = state.page;
-            document.getElementById('jumpInput').value = '';
+        // 這是您之前報錯找不到的函數，現在補上了
+        function refreshRecommend() {
+            showToast('换一批随机惊喜...');
+            renderRecommend();
         }
 
         function renderFilters() {
@@ -453,13 +463,12 @@
 
             const cContainer = document.getElementById('cateFilters');
             let html = `<button onclick="switchType('', this)" class="pill ${!state.typeId ? 'active' : ''}">全部</button>`;
-            
             if (state.classes && state.classes.length > 0) {
                 html += state.classes.map(c => `
                     <button onclick="switchType('${c.type_id}', this)" class="pill ${state.typeId == c.type_id ? 'active' : ''}">${c.type_name}</button>
                 `).join('');
             } else {
-                html = '<span class="text-[10px] text-gray-500">暫無分類數據</span>';
+                html = '<span class="text-[10px] text-gray-500">暂无分类数据</span>';
             }
             cContainer.innerHTML = html;
         }
@@ -479,28 +488,6 @@
                 </div>
             `).join('');
         }
-
-        window.renderRecommend = function() {
-            const container = document.getElementById('recommendGrid');
-            if (!container) return;
-            const pool = state.allPool.length > 10 ? state.allPool : state.movies;
-            const shuffled = [...pool].sort(() => 0.5 - Math.random());
-            const selected = shuffled.slice(0, 10);
-            container.innerHTML = selected.map(m => `
-                <div class="movie-card animate-fade-in cursor-pointer hover:opacity-80 transition-opacity" onclick="openPlayerWithData(${JSON.stringify(m).replace(/"/g, '&quot;')})">
-                    <div class="relative mb-2">
-                        <img src="${m.vod_pic}" class="w-full rounded-xl aspect-[2/3] object-cover" loading="lazy" onerror="this.src='https://via.placeholder.com/200x300?text=NAIXX'">
-                        <div class="absolute top-2 right-2 bg-black/60 backdrop-blur text-[7px] font-black px-1.5 py-0.5 rounded text-amber-500 border border-amber-500/30">推薦</div>
-                    </div>
-                    <h3 class="text-[11px] font-bold text-gray-300 truncate">${m.vod_name}</h3>
-                </div>
-            `).join('');
-        };
-
-        window.refreshRecommend = function() {
-            showToast('換一批隨機驚喜...');
-            renderRecommend();
-        };
 
         function renderHero() {
             const wrapper = document.getElementById('heroWrapper');
@@ -535,34 +522,320 @@
             `).join('');
         }
 
-        function stopPlayer() {
-            const iframe = document.getElementById('mainPlayer');
-            if (iframe) iframe.src = ''; 
+        function renderUI() {
+            renderGrid();
+            renderHero();
+            renderRank();
+            renderFilters();
+            renderProfile();
+            document.getElementById('currentPageDisplay').innerText = state.page;
+            document.getElementById('jumpInput').value = '';
         }
 
-        window.switchTab = function(tab) {
-            stopPlayer();
-            state.currentTab = tab;
-            document.getElementById('homeView').style.display = tab === 'home' ? 'block' : 'none';
-            document.getElementById('rankView').style.display = tab === 'rank' ? 'block' : 'none';
-            document.getElementById('playView').style.display = 'none';
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`tab-${tab}`).classList.add('active');
+        // --- 3. 核心邏輯 (HOISTED) ---
+
+        function checkAccess() {
+            const input = document.getElementById('pwInput').value;
+            if (input === '199688') {
+                localStorage.setItem('naixx_auth_mode', 'safe');
+                unlockSite('safe');
+            } else if (input === '1996') {
+                localStorage.setItem('naixx_auth_mode', 'full');
+                unlockSite('full');
+            } else {
+                showToast('密碼錯誤');
+            }
+        }
+
+        function unlockSite(modeStr, accountName) {
+            document.getElementById('passwordView').style.display = 'none';
+            const app = document.getElementById('mainApp');
+            app.classList.remove('hidden');
+            setTimeout(() => app.classList.add('opacity-100'), 50);
+            initMode(modeStr);
+            initDatabase(); 
+        }
+
+        function initMode(modeStr) {
+            state.mode = modeStr;
+            if (modeStr === 'safe') {
+                CONFIG.sources = [RAW_SOURCES[3]]; 
+                document.title = '極速藍光影視 - Free Cinema';
+                document.getElementById('appTitle').innerText = 'BlueRay';
+                document.getElementById('pcTitle').innerText = 'HD';
+                state.activeSourceIdx = 0; 
+            } else {
+                CONFIG.sources = RAW_SOURCES; 
+                document.title = '奶香香影視 - Premium Cinema';
+                document.getElementById('appTitle').innerText = 'Naixx';
+                document.getElementById('pcTitle').innerText = 'NAIXX.';
+                state.activeSourceIdx = 0; 
+            }
+            initApp();
+        }
+
+        function handleLogin() {
+            const acc = document.getElementById('accountInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
+            if (!acc || !pass) { showToast('请输入账号和密码'); return; }
+
+            const btnText = document.getElementById('loginBtnText');
+            const loader = document.getElementById('loginLoading');
+            btnText.innerText = '处理中...';
+            loader.classList.remove('hidden');
+
+            const email = `${acc}@naixx.com`;
+            const safePass = pass.length < 6 ? pass + 'naixx' : pass;
+
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth();
+
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                .then(() => auth.signInWithEmailAndPassword(email, safePass))
+                .then((userCredential) => finishLogin(userCredential.user, acc))
+                .catch((error) => {
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-login-credentials' || error.code === 'auth/invalid-credential') {
+                        return auth.createUserWithEmailAndPassword(email, safePass)
+                            .then((userCredential) => finishLogin(userCredential.user, acc))
+                            .catch((createError) => {
+                                showToast(createError.code === 'auth/email-already-in-use' ? '密码错误，请重试' : '注册失败: ' + createError.message);
+                                document.getElementById('loginBtnText').innerText = '极速登录 / 注册';
+                                document.getElementById('loginLoading').classList.add('hidden');
+                            });
+                    } else {
+                        showToast('登录失败: ' + error.message);
+                        document.getElementById('loginBtnText').innerText = '极速登录 / 注册';
+                        document.getElementById('loginLoading').classList.add('hidden');
+                    }
+                });
+        }
+
+        function finishLogin(user, accountName) {
+            state.user = user;
+            state.currentAccount = accountName;
+            
+            if (accountName === '1996') {
+                localStorage.setItem('naixx_auth_mode', 'full');
+                unlockSite('full', accountName);
+            } else if (accountName === '199688') {
+                localStorage.setItem('naixx_auth_mode', 'safe');
+                unlockSite('safe', accountName);
+            } else {
+                localStorage.setItem('naixx_auth_mode', 'safe');
+                unlockSite('safe', accountName);
+            }
+        }
+
+        function handleLogout() {
+            firebase.auth().signOut().then(() => {
+                localStorage.removeItem('naixx_auth_mode');
+                location.reload();
+            });
+        }
+
+        function updateNickname() {
+            const currentName = state.user ? (state.user.displayName || "我的收藏") : "我的收藏";
+            const newName = prompt("请输入您想显示的个性化昵称:", currentName);
+            if (newName && newName.trim() !== "") {
+                document.getElementById('userNameDisplay').innerText = newName;
+                if (state.user) {
+                    state.user.updateProfile({ displayName: newName })
+                        .then(() => showToast("昵称云端同步成功"))
+                        .catch(() => showToast("仅本地修改生效"));
+                } else {
+                    showToast("昵称已本地保存");
+                }
+            }
+        }
+
+        function toggleFav() {
+            if (!state.current) return;
+            const isFav = state.favorites.some(m => m.vod_id === state.current.vod_id);
+            const icon = document.getElementById('favIcon');
+            const favData = {
+                vod_id: state.current.vod_id,
+                vod_name: state.current.vod_name,
+                vod_pic: state.current.vod_pic,
+                vod_play_url: state.current.vod_play_url,
+                sourceIdx: state.activeSourceIdx,
+                sourceName: CONFIG.sources[state.activeSourceIdx].name, 
+                timestamp: Date.now()
+            };
+
+            if (state.user && state.db) {
+                if (isFav) {
+                    state.db.collection('users').doc(state.user.uid).collection('favorites').doc(String(state.current.vod_id)).delete()
+                        .catch(e => { showToast('删除失败'); icon.className = 'fas fa-heart text-red-500 text-lg'; });
+                    icon.className = 'far fa-heart text-white text-lg';
+                    showToast('已移除云端');
+                } else {
+                    state.db.collection('users').doc(state.user.uid).collection('favorites').doc(String(state.current.vod_id)).set(favData)
+                        .catch(e => { showToast('收藏失败'); icon.className = 'far fa-heart text-white text-lg'; });
+                    icon.className = 'fas fa-heart text-red-500 text-lg';
+                    showToast('已同步至云端');
+                }
+            } else {
+                showToast('请先登录');
+            }
+        }
+
+        function initDatabase() {
+            if (firebaseConfig.apiKey) {
+                try {
+                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                    state.db = firebase.firestore();
+                    const auth = firebase.auth();
+
+                    auth.onAuthStateChanged(user => {
+                        if (user) {
+                            state.user = user;
+                            document.getElementById('cloudStatus').innerText = '云端同步中 (加密存儲)';
+                            document.getElementById('cloudStatus').className = 'text-xs text-green-500 mt-1';
+                            
+                            const displayAcc = user.email ? user.email.split('@')[0] : 'User';
+                            document.getElementById('userIdDisplay').innerText = `Account: ${displayAcc}`;
+                            if (user.displayName) document.getElementById('userNameDisplay').innerText = user.displayName;
+                            if (!state.currentAccount) state.currentAccount = displayAcc;
+
+                            state.db.collection('users').doc(user.uid).collection('favorites')
+                                .onSnapshot((snapshot) => {
+                                    state.favorites = [];
+                                    snapshot.forEach(doc => state.favorites.push(doc.data()));
+                                    state.favorites.sort((a, b) => b.timestamp - a.timestamp);
+                                    if (state.currentTab === 'profile') renderProfile();
+                                    updateFavIcon();
+                                });
+                        } else {
+                            document.getElementById('mainApp').classList.add('hidden');
+                            document.getElementById('passwordView').style.display = 'flex';
+                        }
+                    });
+                } catch (e) {
+                    console.log("Firebase Init Failed", e);
+                }
+            }
+        }
+
+        async function fastRaceFetch(url) {
+            const fetchTasks = CONFIG.proxies.map(async (proxyFn) => {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3500); 
+                try {
+                    const resp = await fetch(proxyFn(url), { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    if (!resp.ok) throw new Error('Network error');
+                    let result = await resp.json();
+                    if (result.contents) result = JSON.parse(result.contents);
+                    const final = Array.isArray(result) ? result[0] : result;
+                    if (final) return final;
+                    throw new Error('Empty data');
+                } catch (e) { throw e; }
+            });
+            try { return await Promise.any(fetchTasks); } catch (e) { return null; }
+        }
+
+        async function loadClasses() {
+            let baseUrl = CONFIG.sources[state.activeSourceIdx].url;
+            baseUrl = baseUrl.replace('at/json', '').replace('at/xml', '');
+            const joinChar = baseUrl.includes('?') ? '&' : '?';
+            const url = `${baseUrl}${joinChar}ac=list`;
+
+            const data = await fastRaceFetch(url);
+            if (data && data.class) {
+                state.classes = data.class;
+                const cacheKey = `classes_${state.mode}_${state.activeSourceIdx}`;
+                localStorage.setItem(cacheKey, JSON.stringify(data.class));
+                showToast(`已同步 ${data.class.length} 个分类`);
+                renderFilters();
+            }
+        }
+
+        async function fetchData(page = 1) {
+            if (page < 1) return;
+            renderSkeleton();
             const scrollContainer = document.documentElement.classList.contains('is-desktop') ? document.getElementById('app-wrapper') : window;
-            scrollContainer.scrollTo(0,0);
-        };
+            scrollContainer.scrollTo({top: 0, behavior: 'smooth'});
+            
+            const source = CONFIG.sources[state.activeSourceIdx].url;
+            const target = `${source}?ac=detail&pg=${page}${state.typeId ? '&t='+state.typeId : ''}${state.keyword ? '&wd='+encodeURIComponent(state.keyword) : ''}`;
+            
+            const data = await fastRaceFetch(target);
+            if (data && data.list) {
+                state.movies = data.list.map(m => ({ ...m, heat: (Math.random()*20 + 79.5).toFixed(1) }));
+                state.page = parseInt(data.page);
+                state.allPool = [...new Set([...state.allPool, ...state.movies])];
+                renderUI();
+                renderRecommend();
+            } else {
+                showToast('加载失败，请切换线路');
+            }
+        }
 
-        window.openPlayer = (idx) => openPlayerWithData(state.movies[idx]);
+        async function initApp() {
+            document.getElementById('cateFilters').innerHTML = '<span class="text-[10px] text-gray-500 animate-pulse">正在同步分类库...</span>';
+            const cacheKey = `classes_${state.mode}_${state.activeSourceIdx}`;
+            const cachedClasses = localStorage.getItem(cacheKey);
+            if (cachedClasses) {
+                state.classes = JSON.parse(cachedClasses);
+                renderFilters();
+            }
+            loadClasses();
+            fetchData();
+        }
 
-        window.openPlayerWithData = (m) => {
+        function addComment(list, comments) {
+            const randomId = 'User' + Math.floor(Math.random() * 9000 + 1000);
+            const randomVip = Math.floor(Math.random() * 10) + 1;
+            const text = comments[Math.floor(Math.random() * comments.length)];
+            const isSvip = randomVip > 8;
+            const div = document.createElement('div');
+            div.className = "flex items-start gap-2 animate-fade-in";
+            div.innerHTML = `
+                <div class="min-w-[24px] h-6 bg-white/10 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-[10px] text-gray-400"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-bold ${isSvip ? 'svip-gold' : 'text-gray-300'}">${randomId}</span>
+                        ${isSvip ? '<i class="fas fa-crown text-[8px] text-yellow-500"></i>' : '<i class="fas fa-gem text-[8px] text-blue-400"></i>'}
+                        <span class="text-[8px] bg-white/10 px-1 rounded text-gray-400 scale-90 origin-left">LV.${randomVip}</span>
+                    </div>
+                    <p class="text-[10px] text-gray-400 mt-0.5 leading-tight">${text}</p>
+                </div>
+                <button onclick="this.classList.toggle('text-red-500')" class="text-gray-600 active:scale-125 transition-transform"><i class="fas fa-heart text-xs"></i></button>
+            `;
+            list.insertBefore(div, list.firstChild);
+        }
+
+        function startFakeComments() {
+            if (state.commentInterval) clearInterval(state.commentInterval);
+            const list = document.getElementById('commentList');
+            list.innerHTML = ''; 
+            const comments = ["这速度绝了！秒播啊", "画质很顶，支持站长", "终于找到这部了，感谢分享", "无广告真的爽", "VIP888路过，这片子不错", "剧情神反转，推荐", "晚上就靠这个续命了", "良心网站，已收藏", "加载真快，比其他站强多了", "这个女主角是谁？好漂亮", "兄弟们，求推荐类似的", "这才是高清，爱了爱了"];
+            for(let i=0; i<4; i++) addComment(list, comments);
+            state.commentInterval = setInterval(() => {
+                addComment(list, comments);
+                if(list.children.length > 20) list.removeChild(list.lastElementChild);
+            }, 2500);
+        }
+
+        function openPlayerWithData(m) {
             state.current = m;
             document.getElementById('homeView').style.display = 'none';
             document.getElementById('rankView').style.display = 'none';
+            document.getElementById('profileView').style.display = 'none';
             document.getElementById('playView').style.display = 'block';
+            
             const scrollContainer = document.documentElement.classList.contains('is-desktop') ? document.getElementById('app-wrapper') : window;
             scrollContainer.scrollTo({top: 0, behavior: 'smooth'});
+            
             document.getElementById('pTitle').innerText = m.vod_name;
             document.getElementById('pContent').innerText = (m.vod_content || '暫無介紹').replace(/<[^>]+>/g, '');
+            document.getElementById('playerSourceTag').innerText = CONFIG.sources[state.activeSourceIdx].name;
+            
+            updateFavIcon();
+            startFakeComments();
+
             const urlData = m.vod_play_url.split('$$$')[0];
             const eps = urlData.split('#').map(l => {
                 const parts = l.split('$');
@@ -571,10 +844,19 @@
             const list = document.getElementById('epList');
             list.innerHTML = eps.map(e => `<button onclick="playUrl('${e.u}', this)" class="bg-white/5 border border-white/10 py-2 rounded-lg text-[10px] text-gray-400 truncate px-1 font-bold hover:bg-white/20 transition-colors">${e.n}</button>`).join('');
             if (eps.length > 0) playUrl(eps[0].u, list.firstElementChild);
-            renderRecommend(); 
-        };
+            refreshRecommend(); 
+        }
 
-        window.playUrl = (u, btn) => {
+        function openPlayer(idx) {
+            openPlayerWithData(state.movies[idx]);
+        }
+
+        function playFav(m) {
+            if (m.sourceIdx !== undefined) state.activeSourceIdx = m.sourceIdx;
+            openPlayerWithData(m);
+        }
+
+        function playUrl(u, btn) {
             document.querySelectorAll('#epList button').forEach(b => b.className = 'bg-white/5 border border-white/10 py-2 rounded-lg text-[10px] text-gray-400 truncate px-1 font-bold hover:bg-white/20 transition-colors');
             if (btn) btn.className = 'bg-red-600 border-red-600 py-2 rounded-lg text-[10px] text-white truncate px-1 font-bold shadow-lg shadow-red-600/30';
             const loader = document.getElementById('playerLoading');
@@ -583,43 +865,67 @@
             const currentSource = CONFIG.sources[state.activeSourceIdx];
             iframe.src = currentSource.parser + encodeURIComponent(u.trim());
             iframe.onload = () => loader.classList.add('hidden');
-        };
+        }
 
-        window.jumpToPage = function() {
+        function jumpToPage() {
             const val = document.getElementById('jumpInput').value;
-            if (val && val > 0) { fetchData(parseInt(val)); } else { showToast('請輸入有效頁碼'); }
-        };
+            if (val && val > 0) { fetchData(parseInt(val)); } else { showToast('请输入有效页码'); }
+        }
 
-        window.goHome = () => { stopPlayer(); switchTab('home'); };
+        function goHome() { 
+            const iframe = document.getElementById('mainPlayer');
+            if (iframe) iframe.src = ''; 
+            switchTab('home'); 
+        }
 
-        window.toggleSearch = () => {
+        function toggleSearch() {
             const el = document.getElementById('searchOverlay');
             el.classList.toggle('hidden');
             el.classList.toggle('flex');
             if (!el.classList.contains('hidden')) document.getElementById('mobileSearchInput').focus();
-        };
+        }
 
-        window.switchSource = async (idx) => {
+        async function switchSource(idx) {
             stopPlayer();
             state.activeSourceIdx = idx; state.page = 1; state.classes = [];
-            showToast(`線路切換中...`);
+            showToast(`线路切换中...`);
             await initApp();
-        };
+        }
 
-        window.switchType = (id, btn) => {
+        function switchType(id, btn) {
             stopPlayer();
             state.typeId = id; state.page = 1;
             fetchData(1);
             const scrollContainer = document.documentElement.classList.contains('is-desktop') ? document.getElementById('app-wrapper') : window;
             scrollContainer.scrollTo(0,0);
-        };
+        }
 
-        function renderSkeleton() { document.getElementById('movieGrid').innerHTML = Array(6).fill('<div class="skeleton aspect-[2/3] rounded-2xl"></div>').join(''); }
-        function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1'; t.style.bottom = '100px'; setTimeout(() => { t.style.opacity = '0'; t.style.bottom = '80px'; }, 2000); }
+        function switchTab(tab) {
+            stopPlayer();
+            state.currentTab = tab;
+            document.getElementById('homeView').style.display = tab === 'home' ? 'block' : 'none';
+            document.getElementById('rankView').style.display = tab === 'rank' ? 'block' : 'none';
+            document.getElementById('profileView').style.display = tab === 'profile' ? 'block' : 'none';
+            document.getElementById('playView').style.display = 'none';
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            
+            if (tab === 'profile') {
+                renderProfile();
+            }
+            
+            const scrollContainer = document.documentElement.classList.contains('is-desktop') ? document.getElementById('app-wrapper') : window;
+            scrollContainer.scrollTo(0,0);
+        }
+
+        function stopPlayer() {
+            const iframe = document.getElementById('mainPlayer');
+            if (iframe) iframe.src = ''; 
+        }
+
         document.getElementById('mobileSearchInput').onkeypress = (e) => { if (e.key === 'Enter') { state.keyword = e.target.value; state.page = 1; toggleSearch(); fetchData(1); } };
 
         window.onload = () => {
-            // 自動登錄檢查
             const mode = localStorage.getItem('naixx_auth_mode');
             if (mode) unlockSite(mode);
         };
